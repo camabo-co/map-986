@@ -5,28 +5,27 @@
   <title>座標マップ（未取得のみ表示）</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- Leaflet ライブラリの読み込み -->
+  <!-- Leafletライブラリ -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-  <!-- 自作のCSSとJSの読み込み -->
+  <!-- 自作CSS/JS -->
   <link rel="stylesheet" href="style/map.css">
   <script src="scripts/map.js" defer></script>
 </head>
 <body>
 
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-  if (sessionStorage.getItem("authenticated") === "true") return;
-
-  const password = prompt("パスワードを入力してください：");
-  if (password === "wareranochonnma") {
-    sessionStorage.setItem("authenticated", "true");
-  } else {
-    alert("パスワードが違います。");
-    window.location.href = "https://www.google.com";
-  }
-});
+  document.addEventListener("DOMContentLoaded", function () {
+    if (sessionStorage.getItem("authenticated") === "true") return;
+    const password = prompt("パスワードを入力してください：");
+    if (password === "wareranochonnma") {
+      sessionStorage.setItem("authenticated", "true");
+    } else {
+      alert("パスワードが違います。");
+      window.location.href = "https://www.google.com";
+    }
+  });
 </script>
 
 <h2>📍 座標マップ（未取得のみ表示）</h2>

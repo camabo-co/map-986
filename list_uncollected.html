@@ -20,7 +20,9 @@
       border-radius: 4px;
       cursor: pointer;
     }
-    button:hover { background-color: darkred; }
+    button:hover {
+      background-color: darkred;
+    }
   </style>
 </head>
 <body>
@@ -54,43 +56,4 @@
           const ul = document.createElement("ul");
           grouped[level].forEach(d => {
             const li = document.createElement("li");
-            li.textContent = `${d.サーバー名} / X:${d.X}, Y:${d.Y}`;
-
-            const btn = document.createElement("button");
-            btn.textContent = "削除";
-            btn.onclick = () => {
-              if (confirm("この座標を削除（取得済みに変更）しますか？")) {
-                fetch(API_URL, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    サーバー名: d.サーバー名,
-                    X: d.X,
-                    Y: d.Y,
-                    レベル: d.レベル,
-                    取得状況: "取得済み"
-                  })
-                })
-                  .then(res => res.json())
-                  .then(res => {
-                    alert(res.message);
-                    location.reload();
-                  })
-                  .catch(err => alert("削除エラー: " + err.message));
-              }
-            };
-
-            li.appendChild(btn);
-            ul.appendChild(li);
-          });
-
-          block.appendChild(ul);
-          list.appendChild(block);
-        });
-      })
-      .catch(err => {
-        document.getElementById("list").innerHTML = "読み込みエラー: " + err.message;
-      });
-  </script>
-</body>
-</html>
+            li.textContent = `${d.サーバー名} / X:${d.X}, Y:${d.Y
