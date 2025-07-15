@@ -10,13 +10,13 @@ const map = L.map('map', {
 map.fitBounds([[0, 0], [1000, 1000]]);
 map.setZoom(0);
 
-// グリッド線描画
+// グリッド線
 for (let i = 0; i <= 1000; i++) {
   L.polyline([[i, 0], [i, 1000]], { color: "#ccc", weight: 0.5 }).addTo(map);
   L.polyline([[0, i], [1000, i]], { color: "#ccc", weight: 0.5 }).addTo(map);
 }
 
-// マーカー表示（未取得のみ）
+// 未取得マーカー表示
 fetch(API_URL)
   .then(res => res.json())
   .then(data => {
@@ -54,7 +54,7 @@ fetch(API_URL)
   })
   .catch(err => alert("地図データの取得エラー: " + err.message));
 
-// 登録処理
+// 座標登録処理
 document.getElementById("coordForm").addEventListener("submit", function (e) {
   e.preventDefault();
   const data = {
