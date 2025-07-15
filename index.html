@@ -36,9 +36,9 @@
   <button type="submit">登録する</button>
 </form>
 
-<div id="map" style="height: 600px; margin-top: 20px;"></div>
+<div id="map"></div>
 
-<!-- リスト表示切替ボタン -->
+<!-- リスト表示切り替えボタン -->
 <button id="toggleUnclaimed">未取得リストを表示</button>
 <ul id="unclaimedList" style="display: none;"></ul>
 
@@ -64,20 +64,17 @@
   const form = document.getElementById("coordinateForm");
   const map = L.map("map", {
     crs: L.CRS.Simple,
-    minZoom: -1,
+    minZoom: -3,
     maxZoom: 2
-  }).setView([500, 500], 0);
+  }).setView([500, 500], -2); // Zoom -2で全体表示
 
-  // グリッド描画
-  // グリッド描画（200刻み）
-for (let x = 0; x <= 1000; x += 200) {
-  L.polyline([[0, x], [1000, x]], { color: "#ddd", weight: 1 }).addTo(map);
-}
-for (let y = 0; y <= 1000; y += 200) {
-  L.polyline([[y, 0], [y, 1000]], { color: "#ddd", weight: 1 }).addTo(map);
-}
-
-
+  // グリッド描画（200間隔）
+  for (let x = 0; x <= 1000; x += 200) {
+    L.polyline([[0, x], [1000, x]], { color: "#ddd", weight: 1 }).addTo(map);
+  }
+  for (let y = 0; y <= 1000; y += 200) {
+    L.polyline([[y, 0], [y, 1000]], { color: "#ddd", weight: 1 }).addTo(map);
+  }
 
   const levelColors = {
     "1": "blue", "2": "lightblue", "3": "green", "4": "lime",
@@ -154,26 +151,37 @@ for (let y = 0; y <= 1000; y += 200) {
             ? `<button onclick="changeStatus('${item._id}')">取得済みにする</button>`
             : `<button onclick="restoreStatus('${item._id}')">未取得に戻す</button>`
         }
+        <br><button onclick="deleteItem('${item._id}')">削除</button>
       `);
     });
 
+    // 未取得リスト表示
     unclaimedItems.forEach(item => {
       const li = document.createElement("li");
       li.textContent = `サーバー名: ${item.サーバー名} | 座標: (${item.X}, ${item.Y}) | Lv${item.レベル}`;
-      const btn = document.createElement("button");
-      btn.textContent = "取得済みに変更";
-      btn.onclick = () => changeStatus(item._id);
-      li.appendChild(btn);
+      const btnStatus = document.createElement("button");
+      btnStatus.textContent = "取得済みに変更";
+      btnStatus.onclick = () => changeStatus(item._id);
+      const btnDelete = document.createElement("button");
+      btnDelete.textContent = "削除";
+      btnDelete.onclick = () => deleteItem(item._id);
+      li.appendChild(btnStatus);
+      li.appendChild(btnDelete);
       unclaimedList.appendChild(li);
     });
 
+    // 取得済みリスト表示
     claimedItems.forEach(item => {
       const li = document.createElement("li");
       li.textContent = `サーバー名: ${item.サーバー名} | 座標: (${item.X}, ${item.Y}) | Lv${item.レベル}`;
-      const btn = document.createElement("button");
-      btn.textContent = "未取得に戻す";
-      btn.onclick = () => restoreStatus(item._id);
-      li.appendChild(btn);
+      const btnRestore = document.createElement("button");
+      btnRestore.textContent = "未取得に戻す";
+      btnRestore.onclick = () => restoreStatus(item._id);
+      const btnDelete = document.createElement("button");
+      btnDelete.textContent = "削除";
+      btnDelete.onclick = () => deleteItem(item._id);
+      li.appendChild(btnRestore);
+      li.appendChild(btnDelete);
       claimedList.appendChild(li);
     });
   }
@@ -188,9 +196,16 @@ for (let y = 0; y <= 1000; y += 200) {
     loadMarkers();
   };
 
+  window.deleteItem = async (key) => {
+    const confirmed = confirm("本当に削除しますか？");
+    if (!confirmed) return;
+    await update(ref(db), { [`coordinates/${key}`]: null });
+    loadMarkers();
+  };
+
   loadMarkers();
 
-  // リスト表示切り替え
+  // リスト表示切替
   document.getElementById("toggleUnclaimed").addEventListener("click", () => {
     const list = document.getElementById("unclaimedList");
     const btn = document.getElementById("toggleUnclaimed");
