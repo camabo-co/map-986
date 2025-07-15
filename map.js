@@ -1,5 +1,66 @@
 // API URL（GASの最新デプロイURLに差し替えてください）
-const API_URL = "https://script.google.com/macros/s/AKfycbxB2FMirgc9QAENfq04WKdHEAJ4wKk1NH2FneajKw1QadOt65fzc15S3Vx3cKuWeJk/exec";
+const API_URL = "<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>座標マップ（未取得のみ表示）</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Leaflet ライブラリの読み込み -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <!-- 自作のCSSとJSの読み込み -->
+  <link rel="stylesheet" href="style/map.css">
+  <script src="scripts/map.js" defer></script>
+</head>
+<body>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  if (sessionStorage.getItem("authenticated") === "true") return;
+
+  const password = prompt("パスワードを入力してください：");
+  if (password === "wareranochonnma") {
+    sessionStorage.setItem("authenticated", "true");
+  } else {
+    alert("パスワードが違います。");
+    window.location.href = "https://www.google.com";
+  }
+});
+</script>
+
+<h2>📍 座標マップ（未取得のみ表示）</h2>
+
+<form id="coordForm">
+  <label>サーバー名: <input type="text" id="server" required></label>
+  <label>X: <input type="number" id="x" required></label>
+  <label>Y: <input type="number" id="y" required></label>
+  <label>レベル:
+    <select id="level">
+      <option>1</option><option>2</option><option>3</option>
+      <option>4</option><option>5</option><option>6</option><option>7</option>
+    </select>
+  </label>
+  <label>状態:
+    <select id="status">
+      <option>未取得</option>
+      <option>取得済み</option>
+    </select>
+  </label>
+  <button type="submit">登録</button>
+</form>
+
+<div>
+  <a href="list_uncollected.html" target="_blank">📋 未取得一覧</a>
+  <a href="list_collected.html" target="_blank">📋 取得済み一覧</a>
+</div>
+
+<div id="map"></div>
+
+</body>
+</html>
+";
 
 // 地図初期化
 const map = L.map('map', {

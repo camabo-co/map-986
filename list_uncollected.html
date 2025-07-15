@@ -20,9 +20,7 @@
       border-radius: 4px;
       cursor: pointer;
     }
-    button:hover {
-      background-color: darkred;
-    }
+    button:hover { background-color: darkred; }
   </style>
 </head>
 <body>
@@ -46,16 +44,22 @@
         list.innerHTML = "";
 
         Object.keys(grouped).sort().forEach(level => {
-          const div = document.createElement("div");
-          div.className = "level-block";
-          const items = grouped[level].map(d => {
+          const block = document.createElement("div");
+          block.className = "level-block";
+
+          const title = document.createElement("h3");
+          title.textContent = `レベル ${level}`;
+          block.appendChild(title);
+
+          const ul = document.createElement("ul");
+          grouped[level].forEach(d => {
             const li = document.createElement("li");
             li.textContent = `${d.サーバー名} / X:${d.X}, Y:${d.Y}`;
 
             const btn = document.createElement("button");
             btn.textContent = "削除";
             btn.onclick = () => {
-              if (confirm("この座標を削除しますか？")) {
+              if (confirm("この座標を削除（取得済みに変更）しますか？")) {
                 fetch(API_URL, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
@@ -64,12 +68,12 @@
                     X: d.X,
                     Y: d.Y,
                     レベル: d.レベル,
-                    取得状況: "" // 空にすると doPost では更新されないため、本来は削除APIが必要
+                    取得状況: "取得済み"
                   })
                 })
                   .then(res => res.json())
                   .then(res => {
-                    alert("取得状況を空にすることで事実上の削除にしました（GAS側で対応が必要かも）");
+                    alert(res.message);
                     location.reload();
                   })
                   .catch(err => alert("削除エラー: " + err.message));
@@ -77,14 +81,11 @@
             };
 
             li.appendChild(btn);
-            return li;
+            ul.appendChild(li);
           });
 
-          div.innerHTML = `<h3>レベル ${level}</h3>`;
-          const ul = document.createElement("ul");
-          items.forEach(li => ul.appendChild(li));
-          div.appendChild(ul);
-          list.appendChild(div);
+          block.appendChild(ul);
+          list.appendChild(block);
         });
       })
       .catch(err => {
