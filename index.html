@@ -15,13 +15,14 @@
 </head>
 <body>
 
-<!-- パスワード認証は <head> または <body> の最上部に配置 -->
+<!-- パスワード認証 -->
 <script>
   window.addEventListener("load", function () {
     if (sessionStorage.getItem("authenticated") === "true") return;
     const password = prompt("パスワードを入力してください：");
     if (password === "wareranochonnma") {
       sessionStorage.setItem("authenticated", "true");
+      location.reload(); // ← 認証成功後に再読み込み！
     } else {
       alert("パスワードが違います。");
       window.location.href = "https://www.google.com";
