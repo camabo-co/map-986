@@ -69,12 +69,14 @@
   }).setView([500, 500], 0);
 
   // グリッド描画
-  for (let x = 0; x <= 1000; x += 200) {
+  // グリッド描画（200刻み）
+for (let x = 0; x <= 1000; x += 200) {
   L.polyline([[0, x], [1000, x]], { color: "#ddd", weight: 1 }).addTo(map);
 }
 for (let y = 0; y <= 1000; y += 200) {
   L.polyline([[y, 0], [y, 1000]], { color: "#ddd", weight: 1 }).addTo(map);
 }
+
 
 
   const levelColors = {
