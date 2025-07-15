@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>座標マップ</title>
- <link rel="stylesheet" href="style/map.css" />
+  <link rel="stylesheet" href="style/map.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
 </head>
@@ -38,15 +38,28 @@
 
 <div id="map"></div>
 
-<!-- リスト表示切り替えボタン -->
 <button id="toggleUnclaimed">未取得リストを表示</button>
-<ul id="unclaimedList" style="display: none;"></ul>
-
 <button id="toggleClaimed">取得済みリストを表示</button>
-<ul id="claimedList" style="display: none;"></ul>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
   import { getDatabase, ref, push, get, child, update } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+
+  function openListTab(title, items) {
+    const win = window.open("", "_blank");
+    win.document.write(`
+      <html><head><title>${title}</title>
+      <style>
+        body { font-family: sans-serif; padding: 20px; background:#fafafa; }
+        ul { list-style:none; padding:0; }
+        li { background:#fff; border:1px solid #ccc; margin:5px 0; padding:10px; }
+      </style></head><body>
+      <h1>${title}</h1><ul>
+      ${items.map(item => `<li>${item}</li>`).join("")}
+      </ul></body></html>
+    `);
+    win.document.close();
+  }
 
   const firebaseConfig = {
     apiKey: "AIzaSyDdNI04D1xhQihN3DBDdF1_YAp6XRcErDw",
@@ -66,20 +79,22 @@
     crs: L.CRS.Simple,
     minZoom: -3,
     maxZoom: 2
-  }).setView([500, 500], -2); // Zoom -2で全体表示
+  }).setView([500, 500], -2);
 
-  // グリッド描画（200間隔）
-  for (let x = 0; x <= 1000; x += 200) {
-    L.polyline([[0, x], [1000, x]], { color: "#ddd", weight: 1 }).addTo(map);
+  // グリッド描画（100刻み）
+  for (let x = 0; x <= 1000; x += 100) {
+    L.polyline([[0, x], [1000, x]], { color: "#ccc", weight: 1 }).addTo(map);
   }
-  for (let y = 0; y <= 1000; y += 200) {
-    L.polyline([[y, 0], [y, 1000]], { color: "#ddd", weight: 1 }).addTo(map);
+  for (let y = 0; y <= 1000; y += 100) {
+    L.polyline([[y, 0], [y, 1000]], { color: "#ccc", weight: 1 }).addTo(map);
   }
 
   const levelColors = {
     "1": "blue", "2": "lightblue", "3": "green", "4": "lime",
     "5": "orange", "6": "red", "7": "purple"
   };
+
+  let unclaimedItems = [], claimedItems = [];
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -111,10 +126,7 @@
   });
 
   async function loadMarkers() {
-    const unclaimedList = document.getElementById("unclaimedList");
-    const claimedList = document.getElementById("claimedList");
-    unclaimedList.innerHTML = "";
-    claimedList.innerHTML = "";
+    unclaimedItems = []; claimedItems = [];
 
     map.eachLayer(layer => {
       if (layer instanceof L.CircleMarker) map.removeLayer(layer);
@@ -123,18 +135,11 @@
     const snapshot = await get(child(ref(db), "coordinates"));
     const items = snapshot.exists() ? snapshot.val() : {};
 
-    const unclaimedItems = [], claimedItems = [];
-
     for (const key in items) {
       const item = items[key];
       item._id = key;
       (item.取得状況 === "未取得" ? unclaimedItems : claimedItems).push(item);
-    }
 
-    unclaimedItems.sort((a, b) => parseInt(a.レベル) - parseInt(b.レベル));
-    claimedItems.sort((a, b) => parseInt(a.レベル) - parseInt(b.レベル));
-
-    [...unclaimedItems, ...claimedItems].forEach(item => {
       const coords = [item.Y, item.X];
       const color = levelColors[item.レベル] || "gray";
 
@@ -153,37 +158,7 @@
         }
         <br><button onclick="deleteItem('${item._id}')">削除</button>
       `);
-    });
-
-    // 未取得リスト表示
-    unclaimedItems.forEach(item => {
-      const li = document.createElement("li");
-      li.textContent = `サーバー名: ${item.サーバー名} | 座標: (${item.X}, ${item.Y}) | Lv${item.レベル}`;
-      const btnStatus = document.createElement("button");
-      btnStatus.textContent = "取得済みに変更";
-      btnStatus.onclick = () => changeStatus(item._id);
-      const btnDelete = document.createElement("button");
-      btnDelete.textContent = "削除";
-      btnDelete.onclick = () => deleteItem(item._id);
-      li.appendChild(btnStatus);
-      li.appendChild(btnDelete);
-      unclaimedList.appendChild(li);
-    });
-
-    // 取得済みリスト表示
-    claimedItems.forEach(item => {
-      const li = document.createElement("li");
-      li.textContent = `サーバー名: ${item.サーバー名} | 座標: (${item.X}, ${item.Y}) | Lv${item.レベル}`;
-      const btnRestore = document.createElement("button");
-      btnRestore.textContent = "未取得に戻す";
-      btnRestore.onclick = () => restoreStatus(item._id);
-      const btnDelete = document.createElement("button");
-      btnDelete.textContent = "削除";
-      btnDelete.onclick = () => deleteItem(item._id);
-      li.appendChild(btnRestore);
-      li.appendChild(btnDelete);
-      claimedList.appendChild(li);
-    });
+    }
   }
 
   window.changeStatus = async (key) => {
@@ -197,29 +172,26 @@
   };
 
   window.deleteItem = async (key) => {
-    const confirmed = confirm("本当に削除しますか？");
-    if (!confirmed) return;
-    await update(ref(db), { [`coordinates/${key}`]: null });
-    loadMarkers();
+    if (confirm("本当に削除しますか？")) {
+      await update(ref(db), { [`coordinates/${key}`]: null });
+      loadMarkers();
+    }
   };
 
   loadMarkers();
 
-  // リスト表示切替
   document.getElementById("toggleUnclaimed").addEventListener("click", () => {
-    const list = document.getElementById("unclaimedList");
-    const btn = document.getElementById("toggleUnclaimed");
-    const visible = list.style.display === "block";
-    list.style.display = visible ? "none" : "block";
-    btn.textContent = visible ? "未取得リストを表示" : "未取得リストを非表示";
+    const items = unclaimedItems.map(item =>
+      `サーバー名: ${item.サーバー名} | 座標: (${item.X}, ${item.Y}) | Lv${item.レベル}`
+    );
+    openListTab("未取得リスト", items);
   });
 
   document.getElementById("toggleClaimed").addEventListener("click", () => {
-    const list = document.getElementById("claimedList");
-    const btn = document.getElementById("toggleClaimed");
-    const visible = list.style.display === "block";
-    list.style.display = visible ? "none" : "block";
-    btn.textContent = visible ? "取得済みリストを表示" : "取得済みリストを非表示";
+    const items = claimedItems.map(item =>
+      `サーバー名: ${item.サーバー名} | 座標: (${item.X}, ${item.Y}) | Lv${item.レベル}`
+    );
+    openListTab("取得済みリスト", items);
   });
 </script>
 </body>
