@@ -2,12 +2,27 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>取得済み一覧</title>
+  <title>取得済み一覧（レベル別表示＋削除機能）</title>
   <style>
     body { font-family: sans-serif; padding: 20px; background: #f9f9f9; color: #333; }
     h2 { color: green; }
-    .level-block { margin-bottom: 20px; }
+    h3 { margin-bottom: 5px; }
+    .level-block { margin-bottom: 25px; }
     ul { list-style: none; padding-left: 0; }
+    li { margin-bottom: 6px; }
+    button {
+      margin-left: 8px;
+      padding: 3px 8px;
+      font-size: 12px;
+      background-color: crimson;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: darkred;
+    }
   </style>
 </head>
 <body>
@@ -17,24 +32,67 @@
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbxB2FMirgc9QAENfq04WKdHEAJ4wKk1NH2FneajKw1QadOt65fzc15S3Vx3cKuWeJk/exec";
 
-    fetch(API_URL).then(res => res.json()).then(data => {
-      const grouped = {};
-      data.forEach(d => {
-        if (d.取得状況 === "取得済み") {
-          (grouped[d.レベル] = grouped[d.レベル] || []).push(d);
-        }
+    fetch(API_URL)
+      .then(res => res.json())
+      .then(data => {
+        const grouped = {};
+        data.forEach(d => {
+          if (d.取得状況 === "取得済み") {
+            (grouped[d.レベル] = grouped[d.レベル] || []).push(d);
+          }
+        });
+
+        const list = document.getElementById("list");
+        list.innerHTML = "";
+
+        Object.keys(grouped).sort().forEach(level => {
+          const block = document.createElement("div");
+          block.className = "level-block";
+
+          const title = document.createElement("h3");
+          title.textContent = `レベル ${level}`;
+          block.appendChild(title);
+
+          const ul = document.createElement("ul");
+          grouped[level].forEach(d => {
+            const li = document.createElement("li");
+            li.textContent = `${d.サーバー名} / X:${d.X}, Y:${d.Y}`;
+
+            const btn = document.createElement("button");
+            btn.textContent = "未取得に戻す";
+            btn.onclick = () => {
+              if (confirm("この座標を未取得に戻しますか？")) {
+                fetch(API_URL, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    サーバー名: d.サーバー名,
+                    X: d.X,
+                    Y: d.Y,
+                    レベル: d.レベル,
+                    取得状況: "未取得"
+                  })
+                })
+                  .then(res => res.json())
+                  .then(res => {
+                    alert(res.message);
+                    location.reload();
+                  })
+                  .catch(err => alert("変更エラー: " + err.message));
+              }
+            };
+
+            li.appendChild(btn);
+            ul.appendChild(li);
+          });
+
+          block.appendChild(ul);
+          list.appendChild(block);
+        });
+      })
+      .catch(err => {
+        document.getElementById("list").innerHTML = "読み込みエラー: " + err.message;
       });
-      const list = document.getElementById('list');
-      list.innerHTML = "";
-      Object.keys(grouped).sort().forEach(level => {
-        const div = document.createElement('div');
-        div.className = 'level-block';
-        div.innerHTML = `<h3>レベル ${level}</h3><ul>` +
-          grouped[level].map(d => `<li>${d.サーバー名} / X:${d.X}, Y:${d.Y}</li>`).join('') +
-          '</ul>';
-        list.appendChild(div);
-      });
-    });
   </script>
 </body>
 </html>
