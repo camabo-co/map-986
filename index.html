@@ -45,22 +45,6 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
   import { getDatabase, ref, push, get, child, update } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
-  function openListTab(title, items) {
-    const win = window.open("", "_blank");
-    win.document.write(`
-      <html><head><title>${title}</title>
-      <style>
-        body { font-family: sans-serif; padding: 20px; background:#fafafa; }
-        ul { list-style:none; padding:0; }
-        li { background:#fff; border:1px solid #ccc; margin:5px 0; padding:10px; }
-      </style></head><body>
-      <h1>${title}</h1><ul>
-      ${items.map(item => `<li>${item}</li>`).join("")}
-      </ul></body></html>
-    `);
-    win.document.close();
-  }
-
   const firebaseConfig = {
     apiKey: "AIzaSyDdNI04D1xhQihN3DBDdF1_YAp6XRcErDw",
     authDomain: "maps3-986-ffbbd.firebaseapp.com",
@@ -81,12 +65,12 @@
     maxZoom: 2
   }).setView([500, 500], -2);
 
-  // グリッド描画（100刻み）
-  for (let x = 0; x <= 1000; x += 100) {
-    L.polyline([[0, x], [1000, x]], { color: "#ccc", weight: 1 }).addTo(map);
+  // ✅ グリッド描画（50刻みで 20×20）
+  for (let x = 0; x <= 1000; x += 50) {
+    L.polyline([[0, x], [1000, x]], { color: "#ccc", weight: 0.5 }).addTo(map);
   }
-  for (let y = 0; y <= 1000; y += 100) {
-    L.polyline([[y, 0], [y, 1000]], { color: "#ccc", weight: 1 }).addTo(map);
+  for (let y = 0; y <= 1000; y += 50) {
+    L.polyline([[y, 0], [y, 1000]], { color: "#ccc", weight: 0.5 }).addTo(map);
   }
 
   const levelColors = {
@@ -153,10 +137,10 @@
         状態: ${item.取得状況}<br>
         ${
           item.取得状況 === "未取得"
-            ? `<button onclick="changeStatus('${item._id}')">取得済みにする</button>`
-            : `<button onclick="restoreStatus('${item._id}')">未取得に戻す</button>`
+            ? `<button onclick="window.changeStatus('${item._id}')">取得済みにする</button>`
+            : `<button onclick="window.restoreStatus('${item._id}')">未取得に戻す</button>`
         }
-        <br><button onclick="deleteItem('${item._id}')">削除</button>
+        <br><button onclick="window.deleteItem('${item._id}')">削除</button>
       `);
     }
   }
@@ -180,19 +164,34 @@
 
   loadMarkers();
 
-  document.getElementById("toggleUnclaimed").addEventListener("click", () => {
-    const items = unclaimedItems.map(item =>
-      `サーバー名: ${item.サーバー名} | 座標: (${item.X}, ${item.Y}) | Lv${item.レベル}`
-    );
-    openListTab("未取得リスト", items);
-  });
-
-  document.getElementById("toggleClaimed").addEventListener("click", () => {
-    const items = claimedItems.map(item =>
-      `サーバー名: ${item.サーバー名} | 座標: (${item.X}, ${item.Y}) | Lv${item.レベル}`
-    );
-    openListTab("取得済みリスト", items);
-  });
-</script>
-</body>
-</html>
+  function openListTab(title, items, type) {
+    const win = window.open("", "_blank");
+    win.document.write(`
+      <html>
+      <head><title>${title}</title>
+      <style>
+        body { font-family: sans-serif; padding: 20px; background:#fafafa; }
+        h2 { color: ${type === "unclaimed" ? "purple" : "green"}; }
+        ul { list-style: none; padding: 0; }
+        li {
+          background: #fff;
+          border: 1px solid #ccc;
+          margin-bottom: 8px;
+          padding: 10px;
+          font-size: 14px;
+        }
+        button {
+          margin-left: 8px;
+          padding: 4px 10px;
+          font-size: 12px;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          color: white;
+          background-color: ${type === "unclaimed" ? "#6c63ff" : "darkorange"};
+        }
+        button:hover {
+          background-color: ${type === "unclaimed" ? "#524fcb" : "orangered"};
+        }
+      </style>
+      </head>
