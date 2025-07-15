@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>座標マップ（未取得のみ表示）</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="style/map.css">
+  <script src="scripts/map.js" defer></script>
+</head>
+<body>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const password = prompt("パスワードを入力してください：");
+  if (password !== "wareranochonnma") {
+    alert("パスワードが違います。");
+    window.location.href = "https://www.google.com";
+  }
+});
+</script>
+
+<h2>📍 座標マップ（未取得のみ表示）</h2>
+
+<form id="coordForm">
+  <label>サーバー名: <input type="text" id="server" required></label>
+  <label>X: <input type="number" id="x" required></label>
+  <label>Y: <input type="number" id="y" required></label>
+  <label>レベル:
+    <select id="level">
+      <option>1</option><option>2</option><option>3</option>
+      <option>4</option><option>5</option><option>6</option><option>7</option>
+    </select>
+  </label>
+  <label>状態:
+    <select id="status">
+      <option>未取得</option>
+      <option>取得済み</option>
+    </select>
+  </label>
+  <button type="submit">登録</button>
+</form>
+
+<div>
+  <a href="list_uncollected.html" target="_blank">📋 未取得一覧</a>
+  <a href="list_collected.html" target="_blank">📋 取得済み一覧</a>
+</div>
+
+<div id="map"></div>
+
+</body>
+</html>

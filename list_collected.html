@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>取得済み一覧</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f9f9f9; color: #333; }
+    h2 { color: green; }
+    .level-block { margin-bottom: 20px; }
+    ul { list-style: none; padding-left: 0; }
+  </style>
+</head>
+<body>
+  <h2>📋 取得済み一覧（レベル別）</h2>
+  <div id="list">読み込み中...</div>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbxB2FMirgc9QAENfq04WKdHEAJ4wKk1NH2FneajKw1QadOt65fzc15S3Vx3cKuWeJk/exec";
+
+    fetch(API_URL).then(res => res.json()).then(data => {
+      const grouped = {};
+      data.forEach(d => {
+        if (d.取得状況 === "取得済み") {
+          (grouped[d.レベル] = grouped[d.レベル] || []).push(d);
+        }
+      });
+      const list = document.getElementById('list');
+      list.innerHTML = "";
+      Object.keys(grouped).sort().forEach(level => {
+        const div = document.createElement('div');
+        div.className = 'level-block';
+        div.innerHTML = `<h3>レベル ${level}</h3><ul>` +
+          grouped[level].map(d => `<li>${d.サーバー名} / X:${d.X}, Y:${d.Y}</li>`).join('') +
+          '</ul>';
+        list.appendChild(div);
+      });
+    });
+  </script>
+</body>
+</html>
