@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>座標マップ</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
 </head>
 <body>
 
+<!-- パスワード保護 -->
 <script>
   const password = prompt("このページにアクセスするにはパスワードを入力してください");
   if (password !== "wareranochonnma") {
@@ -44,7 +45,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-  import { getDatabase, ref, push, get, child, update } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+  import { getDatabase, ref, push, set, get, child, update } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDdNI04D1xhQihN3DBDdF1_YAp6XRcErDw",
@@ -58,12 +59,12 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
-
   const form = document.getElementById("coordinateForm");
   const unclaimedList = document.getElementById("unclaimedList");
   const claimedList = document.getElementById("claimedList");
+  const map = L.map("map").setView([500, 500], 1); // 仮の中央表示（X=500,Y=500）
 
-  const map = L.map("map").setView([500, 500], 1); // 地図中央
+  // 🔻 背景なし（tileLayer削除）
 
   const levelColors = {
     "1": "blue",
@@ -83,12 +84,13 @@
     const y = parseInt(formData.get("Y"));
     const level = formData.get("レベル");
 
+    // バリデーション
     if (!/^\d{3,4}$/.test(serverName)) {
       alert("サーバー名は3〜4桁の数字で入力してください");
       return;
     }
     if (isNaN(x) || x < 0 || x > 999 || isNaN(y) || y < 0 || y > 999) {
-      alert("座標は0〜999の範囲で入力してください");
+      alert("XとY座標は0〜999の範囲で入力してください");
       return;
     }
 
@@ -109,7 +111,6 @@
   async function loadMarkers() {
     unclaimedList.innerHTML = "";
     claimedList.innerHTML = "";
-
     map.eachLayer(layer => {
       if (layer instanceof L.CircleMarker) map.removeLayer(layer);
     });
@@ -117,24 +118,8 @@
     const snapshot = await get(child(ref(db), "coordinates"));
     const items = snapshot.exists() ? snapshot.val() : {};
 
-    const unclaimedItems = [];
-    const claimedItems = [];
-
     for (const key in items) {
       const item = items[key];
-      item._id = key;
-      if (item.取得状況 === "未取得") {
-        unclaimedItems.push(item);
-      } else {
-        claimedItems.push(item);
-      }
-    }
-
-    unclaimedItems.sort((a, b) => parseInt(a.レベル) - parseInt(b.レベル));
-    claimedItems.sort((a, b) => parseInt(a.レベル) - parseInt(b.レベル));
-    const allItems = [...unclaimedItems, ...claimedItems];
-
-    allItems.forEach(item => {
       const coords = [item.Y, item.X];
       const color = levelColors[item.レベル] || "gray";
 
@@ -148,7 +133,7 @@
         <b>サーバー名: ${item.サーバー名}</b><br>
         レベル: ${item.レベル}<br>
         状態: ${item.取得状況}<br>
-        ${item.取得状況 === "未取得" ? `<button onclick="changeStatus('${item._id}')">取得済みにする</button>` : ""}
+        ${item.取得状況 === "未取得" ? `<button onclick="changeStatus('${key}')">取得済みにする</button>` : ""}
       `);
 
       const li = document.createElement("li");
@@ -159,7 +144,7 @@
       } else {
         claimedList.appendChild(li);
       }
-    });
+    }
   }
 
   window.changeStatus = async (key) => {
@@ -171,5 +156,6 @@
 
   loadMarkers();
 </script>
+
 </body>
 </html>
