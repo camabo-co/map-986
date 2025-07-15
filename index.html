@@ -10,11 +10,13 @@
 <body>
 
 <script>
-  const password = prompt("このページにアクセスするにはパスワードを入力してください");
-  if (password !== "wareranochonnma") {
-    alert("パスワードが違います。アクセスできません。");
-    location.href = "https://www.google.co.jp";
-  }
+  document.addEventListener("DOMContentLoaded", () => {
+    const password = prompt("このページにアクセスするにはパスワードを入力してください");
+    if (password !== "wareranochonnma") {
+      alert("パスワードが違います。アクセスできません。");
+      location.href = "https://www.google.co.jp";
+    }
+  });
 </script>
 
 <h1>座標登録フォーム</h1>
@@ -51,7 +53,7 @@
     authDomain: "maps3-986-ffbbd.firebaseapp.com",
     databaseURL: "https://maps3-986-ffbbd-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "maps3-986-ffbbd",
-    storageBucket: "maps3-986-ffbbd.firebasestorage.app",
+    storageBucket: "maps3-986-ffbbd.appspot.com",
     messagingSenderId: "701191378459",
     appId: "1:701191378459:web:d2cf8d869f5cba869d0abe"
   };
@@ -79,7 +81,7 @@
     "7": "purple"
   };
 
-  // グリッド描画
+  // グリッド描画（100間隔）
   for (let x = 0; x <= 1000; x += 100) {
     L.polyline([[0, x], [1000, x]], { color: "#ccc", weight: 1 }).addTo(map);
   }
@@ -121,6 +123,7 @@
   async function loadMarkers() {
     unclaimedList.innerHTML = "";
     claimedList.innerHTML = "";
+
     map.eachLayer(layer => {
       if (layer instanceof L.CircleMarker) map.removeLayer(layer);
     });
@@ -143,9 +146,8 @@
 
     unclaimedItems.sort((a, b) => parseInt(a.レベル) - parseInt(b.レベル));
     claimedItems.sort((a, b) => parseInt(a.レベル) - parseInt(b.レベル));
-    const allItems = [...unclaimedItems, ...claimedItems];
 
-    allItems.forEach(item => {
+    [...unclaimedItems, ...claimedItems].forEach(item => {
       const coords = [item.Y, item.X];
       const color = levelColors[item.レベル] || "gray";
 
@@ -195,4 +197,6 @@
     loadMarkers();
   };
 
-  window.restoreStatus = async
+  window.restoreStatus = async (key) => {
+    const updates = {};
+    updates["coordinates/" + key + "/取得状況"] = "未取得";
