@@ -38,12 +38,12 @@
 
 <div id="map" style="height: 600px; margin-top: 20px;"></div>
 
-<h2>未取得リスト</h2>
-<ul id="unclaimedList"></ul>
+<!-- リスト表示切替ボタン -->
+<button id="toggleUnclaimed">未取得リストを表示</button>
+<ul id="unclaimedList" style="display: none;"></ul>
 
-<h2>取得済みリスト</h2>
-<ul id="claimedList"></ul>
-
+<button id="toggleClaimed">取得済みリストを表示</button>
+<ul id="claimedList" style="display: none;"></ul>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
   import { getDatabase, ref, push, get, child, update } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
@@ -62,32 +62,24 @@
   const db = getDatabase(app);
 
   const form = document.getElementById("coordinateForm");
-  const unclaimedList = document.getElementById("unclaimedList");
-  const claimedList = document.getElementById("claimedList");
-
   const map = L.map("map", {
     crs: L.CRS.Simple,
     minZoom: -1,
     maxZoom: 2
   }).setView([500, 500], 0);
 
-  const levelColors = {
-    "1": "blue",
-    "2": "lightblue",
-    "3": "green",
-    "4": "lime",
-    "5": "orange",
-    "6": "red",
-    "7": "purple"
-  };
-
-  // グリッド描画（100間隔）
+  // グリッド描画
   for (let x = 0; x <= 1000; x += 100) {
     L.polyline([[0, x], [1000, x]], { color: "#ccc", weight: 1 }).addTo(map);
   }
   for (let y = 0; y <= 1000; y += 100) {
     L.polyline([[y, 0], [y, 1000]], { color: "#ccc", weight: 1 }).addTo(map);
   }
+
+  const levelColors = {
+    "1": "blue", "2": "lightblue", "3": "green", "4": "lime",
+    "5": "orange", "6": "red", "7": "purple"
+  };
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -108,9 +100,7 @@
 
     const data = {
       サーバー名: serverName,
-      X: x,
-      Y: y,
-      レベル: level,
+      X: x, Y: y, レベル: level,
       取得状況: "未取得"
     };
 
@@ -121,6 +111,8 @@
   });
 
   async function loadMarkers() {
+    const unclaimedList = document.getElementById("unclaimedList");
+    const claimedList = document.getElementById("claimedList");
     unclaimedList.innerHTML = "";
     claimedList.innerHTML = "";
 
@@ -131,17 +123,12 @@
     const snapshot = await get(child(ref(db), "coordinates"));
     const items = snapshot.exists() ? snapshot.val() : {};
 
-    const unclaimedItems = [];
-    const claimedItems = [];
+    const unclaimedItems = [], claimedItems = [];
 
     for (const key in items) {
       const item = items[key];
       item._id = key;
-      if (item.取得状況 === "未取得") {
-        unclaimedItems.push(item);
-      } else {
-        claimedItems.push(item);
-      }
+      (item.取得状況 === "未取得" ? unclaimedItems : claimedItems).push(item);
     }
 
     unclaimedItems.sort((a, b) => parseInt(a.レベル) - parseInt(b.レベル));
@@ -152,9 +139,7 @@
       const color = levelColors[item.レベル] || "gray";
 
       const marker = L.circleMarker(coords, {
-        radius: 8,
-        color: color,
-        fillOpacity: 0.8
+        radius: 8, color: color, fillOpacity: 0.8
       }).addTo(map);
 
       marker.bindPopup(`
@@ -191,12 +176,33 @@
   }
 
   window.changeStatus = async (key) => {
-    const updates = {};
-    updates["coordinates/" + key + "/取得状況"] = "取得済み";
-    await update(ref(db), updates);
+    await update(ref(db), { [`coordinates/${key}/取得状況`]: "取得済み" });
     loadMarkers();
   };
 
   window.restoreStatus = async (key) => {
-    const updates = {};
-    updates["coordinates/" + key + "/取得状況"] = "未取得";
+    await update(ref(db), { [`coordinates/${key}/取得状況`]: "未取得" });
+    loadMarkers();
+  };
+
+  loadMarkers();
+
+  // リスト表示切り替え
+  document.getElementById("toggleUnclaimed").addEventListener("click", () => {
+    const list = document.getElementById("unclaimedList");
+    const btn = document.getElementById("toggleUnclaimed");
+    const visible = list.style.display === "block";
+    list.style.display = visible ? "none" : "block";
+    btn.textContent = visible ? "未取得リストを表示" : "未取得リストを非表示";
+  });
+
+  document.getElementById("toggleClaimed").addEventListener("click", () => {
+    const list = document.getElementById("claimedList");
+    const btn = document.getElementById("toggleClaimed");
+    const visible = list.style.display === "block";
+    list.style.display = visible ? "none" : "block";
+    btn.textContent = visible ? "取得済みリストを表示" : "取得済みリストを非表示";
+  });
+</script>
+</body>
+</html>
