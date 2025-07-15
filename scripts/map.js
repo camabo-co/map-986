@@ -1,4 +1,15 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbxB2FMirgc9QAENfq04WKdHEAJ4wKk1NH2FneajKw1QadOt65fzc15S3Vx3cKuWeJk/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxe8W2-j3bVVnqJbrbczljM5cMXnzeye9hwVuhB7lbrdR1g8qpsXpbdYMbaqR7Bw9E/exec";
+
+// レベルごとの色設定
+const levelColor = {
+  "1": "#1E90FF", // 青
+  "2": "#32CD32", // 緑
+  "3": "#FFA500", // オレンジ
+  "4": "#FF4500", // 赤
+  "5": "#9370DB", // ライラック
+  "6": "#8B4513", // 茶
+  "7": "#000000"  // 黒
+};
 
 // 地図初期化
 const map = L.map('map', {
@@ -10,7 +21,7 @@ const map = L.map('map', {
 map.fitBounds([[0, 0], [1000, 1000]]);
 map.setZoom(0);
 
-// グリッド線
+// グリッド線描画
 for (let i = 0; i <= 1000; i++) {
   L.polyline([[i, 0], [i, 1000]], { color: "#ccc", weight: 0.5 }).addTo(map);
   L.polyline([[0, i], [1000, i]], { color: "#ccc", weight: 0.5 }).addTo(map);
@@ -22,9 +33,10 @@ fetch(API_URL)
   .then(data => {
     data.forEach(d => {
       if (d.取得状況 === "未取得") {
+        const color = levelColor[d.レベル] || "gray";
         const marker = L.circleMarker([parseInt(d.Y), parseInt(d.X)], {
-          radius: 3,
-          color: "black",
+          radius: 4,
+          color: color,
           fillOpacity: 1
         }).addTo(map);
         marker.bindPopup(`${d.サーバー名} / X:${d.X}, Y:${d.Y} / Lv:${d.レベル}`);
@@ -54,7 +66,7 @@ fetch(API_URL)
   })
   .catch(err => alert("地図データの取得エラー: " + err.message));
 
-// 座標登録処理
+// 登録フォーム送信処理
 document.getElementById("coordForm").addEventListener("submit", function (e) {
   e.preventDefault();
   const data = {
