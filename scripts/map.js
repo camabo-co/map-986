@@ -1,17 +1,15 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbxe8W2-j3bVVnqJbrbczljM5cMXnzeye9hwVuhB7lbrdR1g8qpsXpbdYMbaqR7Bw9E/exec";
 
-// レベルごとの色設定
 const levelColor = {
-  "1": "#1E90FF", // 青
-  "2": "#32CD32", // 緑
-  "3": "#FFA500", // オレンジ
-  "4": "#FF4500", // 赤
-  "5": "#9370DB", // ライラック
-  "6": "#8B4513", // 茶
-  "7": "#000000"  // 黒
+  "1": "#1E90FF",
+  "2": "#32CD32",
+  "3": "#FFA500",
+  "4": "#FF4500",
+  "5": "#9370DB",
+  "6": "#8B4513",
+  "7": "#000000"
 };
 
-// 地図初期化
 const map = L.map('map', {
   crs: L.CRS.Simple,
   minZoom: -4,
@@ -21,13 +19,13 @@ const map = L.map('map', {
 map.fitBounds([[0, 0], [1000, 1000]]);
 map.setZoom(0);
 
-// グリッド線描画
+// グリッド描画
 for (let i = 0; i <= 1000; i++) {
   L.polyline([[i, 0], [i, 1000]], { color: "#ccc", weight: 0.5 }).addTo(map);
   L.polyline([[0, i], [1000, i]], { color: "#ccc", weight: 0.5 }).addTo(map);
 }
 
-// 未取得マーカー表示
+// マーカー表示（未取得のみ）
 fetch(API_URL)
   .then(res => res.json())
   .then(data => {
@@ -66,7 +64,7 @@ fetch(API_URL)
   })
   .catch(err => alert("地図データの取得エラー: " + err.message));
 
-// 登録フォーム送信処理
+// 登録処理
 document.getElementById("coordForm").addEventListener("submit", function (e) {
   e.preventDefault();
   const data = {
