@@ -76,16 +76,16 @@ document.getElementById("coordForm").addEventListener("submit", function (e) {
     レベル: document.getElementById("level").value,
     取得状況: document.getElementById("status").value
   };
-  fetch(API_URL)
-  .then(res => res.text()) // JSONではなく text でレスポンス確認
-  .then(text => {
-    console.log("返ってきた内容:", text);
-    try {
-      const data = JSON.parse(text);
-      console.log("JSONパース後:", data);
-    } catch (e) {
-      console.warn("JSONじゃない形式でした:", e);
-    }
+ 
+fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
   })
-  .catch(err => console.error("fetchエラー:", err));
-
+    .then(res => res.json())
+    .then(res => {
+      alert(res.message);
+      location.reload();
+    })
+    .catch(err => alert("登録エラー: " + err.message));
+});
