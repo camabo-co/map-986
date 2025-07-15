@@ -2,61 +2,160 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>座標マップ（未取得のみ表示）</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <!-- Leafletライブラリ -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
-  <!-- 自作CSS/JS -->
-  <link rel="stylesheet" href="style/map.css">
-  <script src="scripts/map.js" defer></script>
+  <title>座標マップ</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
 </head>
 <body>
 
-<!-- パスワード認証 -->
+<!-- パスワード保護 -->
 <script>
-  window.addEventListener("load", function () {
-    if (sessionStorage.getItem("authenticated") === "true") return;
-    const password = prompt("パスワードを入力してください：");
-    if (password === "wareranochonnma") {
-      sessionStorage.setItem("authenticated", "true");
-      location.reload(); // ← 認証成功後に再読み込み！
-    } else {
-      alert("パスワードが違います。");
-      window.location.href = "https://www.google.com";
-    }
-  });
+  const password = prompt("このページにアクセスするにはパスワードを入力してください");
+  if (password !== "wareranochonnma") {
+    alert("パスワードが違います。アクセスできません。");
+    location.href = "https://www.google.co.jp";
+  }
 </script>
 
-<h2>📍 座標マップ（未取得のみ表示）</h2>
-
-<form id="coordForm">
-  <label>サーバー名: <input type="text" id="server" required></label>
-  <label>X: <input type="number" id="x" required></label>
-  <label>Y: <input type="number" id="y" required></label>
-  <label>レベル:
-    <select id="level">
-      <option>1</option><option>2</option><option>3</option>
-      <option>4</option><option>5</option><option>6</option><option>7</option>
-    </select>
-  </label>
-  <label>状態:
-    <select id="status">
-      <option>未取得</option>
-      <option>取得済み</option>
-    </select>
-  </label>
-  <button type="submit">登録</button>
+<h1>座標登録フォーム</h1>
+<form id="coordinateForm">
+  <input type="text" name="サーバー名" placeholder="3〜4桁の数字" required />
+  <input type="number" name="X" placeholder="X座標（0〜999）" required />
+  <input type="number" name="Y" placeholder="Y座標（0〜999）" required />
+  <select name="レベル">
+    <option value="1">Lv1</option>
+    <option value="2">Lv2</option>
+    <option value="3">Lv3</option>
+    <option value="4">Lv4</option>
+    <option value="5">Lv5</option>
+    <option value="6">Lv6</option>
+    <option value="7">Lv7</option>
+  </select>
+  <button type="submit">登録する</button>
 </form>
 
-<div>
-  <a href="list_uncollected.html" target="_blank">📋 未取得一覧</a>
-  <a href="list_collected.html" target="_blank">📋 取得済み一覧</a>
-</div>
+<div id="map" style="height: 600px; margin-top: 20px;"></div>
 
-<div id="map"></div>
+<h2>未取得リスト</h2>
+<ul id="unclaimedList"></ul>
+
+<h2>取得済みリスト</h2>
+<ul id="claimedList"></ul>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+  import { getDatabase, ref, push, set, get, child, update } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDdNI04D1xhQihN3DBDdF1_YAp6XRcErDw",
+    authDomain: "maps3-986-ffbbd.firebaseapp.com",
+    databaseURL: "https://maps3-986-ffbbd-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "maps3-986-ffbbd",
+    storageBucket: "maps3-986-ffbbd.firebasestorage.app",
+    messagingSenderId: "701191378459",
+    appId: "1:701191378459:web:d2cf8d869f5cba869d0abe"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const form = document.getElementById("coordinateForm");
+  const unclaimedList = document.getElementById("unclaimedList");
+  const claimedList = document.getElementById("claimedList");
+  const map = L.map("map").setView([500, 500], 1); // 仮の中央表示（X=500,Y=500）
+
+  // 🔻 背景なし（tileLayer削除）
+
+  const levelColors = {
+    "1": "blue",
+    "2": "lightblue",
+    "3": "green",
+    "4": "lime",
+    "5": "orange",
+    "6": "red",
+    "7": "purple"
+  };
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const formData = new FormData(form);
+    const serverName = formData.get("サーバー名");
+    const x = parseInt(formData.get("X"));
+    const y = parseInt(formData.get("Y"));
+    const level = formData.get("レベル");
+
+    // バリデーション
+    if (!/^\d{3,4}$/.test(serverName)) {
+      alert("サーバー名は3〜4桁の数字で入力してください");
+      return;
+    }
+    if (isNaN(x) || x < 0 || x > 999 || isNaN(y) || y < 0 || y > 999) {
+      alert("XとY座標は0〜999の範囲で入力してください");
+      return;
+    }
+
+    const data = {
+      サーバー名: serverName,
+      X: x,
+      Y: y,
+      レベル: level,
+      取得状況: "未取得"
+    };
+
+    await push(ref(db, "coordinates"), data);
+    alert("登録しました！");
+    form.reset();
+    loadMarkers();
+  });
+
+  async function loadMarkers() {
+    unclaimedList.innerHTML = "";
+    claimedList.innerHTML = "";
+    map.eachLayer(layer => {
+      if (layer instanceof L.CircleMarker) map.removeLayer(layer);
+    });
+
+    const snapshot = await get(child(ref(db), "coordinates"));
+    const items = snapshot.exists() ? snapshot.val() : {};
+
+    for (const key in items) {
+      const item = items[key];
+      const coords = [item.Y, item.X];
+      const color = levelColors[item.レベル] || "gray";
+
+      const marker = L.circleMarker(coords, {
+        radius: 8,
+        color: color,
+        fillOpacity: 0.8
+      }).addTo(map);
+
+      marker.bindPopup(`
+        <b>サーバー名: ${item.サーバー名}</b><br>
+        レベル: ${item.レベル}<br>
+        状態: ${item.取得状況}<br>
+        ${item.取得状況 === "未取得" ? `<button onclick="changeStatus('${key}')">取得済みにする</button>` : ""}
+      `);
+
+      const li = document.createElement("li");
+      li.textContent = `サーバー名: ${item.サーバー名} | 座標: (${item.X}, ${item.Y}) | Lv${item.レベル}`;
+
+      if (item.取得状況 === "未取得") {
+        unclaimedList.appendChild(li);
+      } else {
+        claimedList.appendChild(li);
+      }
+    }
+  }
+
+  window.changeStatus = async (key) => {
+    const updates = {};
+    updates["coordinates/" + key + "/取得状況"] = "取得済み";
+    await update(ref(db), updates);
+    loadMarkers();
+  };
+
+  loadMarkers();
+</script>
 
 </body>
 </html>
