@@ -22,31 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 });
-</script>
 
-<h1>座標登録フォーム</h1>
-<form id="coordinateForm">
-  <input type="text" name="サーバー名" placeholder="3〜4桁の数字" required />
-  <input type="number" name="X" placeholder="X座標（0〜999）" required />
-  <input type="number" name="Y" placeholder="Y座標（0〜999）" required />
-  <select name="レベル">
-    <option value="1">Lv1</option>
-    <option value="2">Lv2</option>
-    <option value="3">Lv3</option>
-    <option value="4">Lv4</option>
-    <option value="5">Lv5</option>
-    <option value="6">Lv6</option>
-    <option value="7">Lv7</option>
-  </select>
-  <button type="submit">登録する</button>
-</form>
-
-<div id="map"></div>
-
-<button id="toggleUnclaimed">未取得リストを表示</button>
-<button id="toggleClaimed">取得済みリストを表示</button>
-
-<script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 import { getDatabase, ref, push, get, child, update } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
@@ -60,8 +36,29 @@ const firebaseConfig = {
   appId: "1:701191378459:web:d2cf8d869f5cba869d0abe"
 };
 
+
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+
+window.deleteItem = async function(key) {
+  if (confirm("本当に削除しますか？")) {
+    await update(ref(db), { [`coordinates/${key}`]: null });
+    alert("削除しました！");
+    location.reload();
+  }
+};
+
+window.changeStatus = async function(key) {
+  await update(ref(db), { [`coordinates/${key}/取得状況`]: "取得済み" });
+  alert("取得済みにしました！");
+  location.reload();
+};
+
+window.restoreStatus = async function(key) {
+  await update(ref(db), { [`coordinates/${key}/取得状況`]: "未取得" });
+  alert("未取得に戻しました！");
+  location.reload();
+};
 
 const form = document.getElementById("coordinateForm");
 const map = L.map("map", {
@@ -69,27 +66,17 @@ const map = L.map("map", {
   minZoom: -3,
   maxZoom: 2
 }).setView([500, 500], -2);
+
 const levelColors = {
-  "1": "blue",
-  "2": "lightblue",
-  "3": "green",
-  "4": "lime",
-  "5": "orange",
-  "6": "red",
-  "7": "purple"
+  "1": "blue", "2": "lightblue", "3": "green", "4": "lime",
+  "5": "orange", "6": "red", "7": "purple"
 };
 
-// 1000×1000 グリッド線を描画
-for (let y = 0; y <= 1000; y += 50) {
-  L.polyline([[y, 0], [y, 1000]], { color: "#ccc", weight: 1 }).addTo(map); // 横線
+// ✅ 1px単位のグリッド描画（1000×1000対応）
+for (let i = 0; i <= 1000; i++) {
+  L.polyline([[i, 0], [i, 1000]], { color: "#ddd", weight: 0.3 }).addTo(map); // 横線
+  L.polyline([[0, i], [1000, i]], { color: "#ddd", weight: 0.3 }).addTo(map); // 縦線
 }
-for (let x = 0; x <= 1000; x += 50) {
-  L.polyline([[0, x], [1000, x]], { color: "#ccc", weight: 1 }).addTo(map); // 縦線
-}
-
-
-
-
 
 let unclaimedItems = [], claimedItems = [];
 
@@ -101,20 +88,6 @@ form.addEventListener("submit", async (e) => {
   const y = parseInt(formData.get("Y"));
   const level = formData.get("レベル");
 
-  // ✅ 重複チェック（新しく追加）
-  const snapshot = await get(child(ref(db), "coordinates"));
-  const existingItems = snapshot.exists() ? snapshot.val() : {};
-
-  for (const key in existingItems) {
-    const item = existingItems[key];
-    if (item.X === x && item.Y === y) {
-      alert(`この座標 X:${x}, Y:${y} はすでに登録されています`);
-      return;
-    }
-  }
-
-
-
   if (!/^\d{3,4}$/.test(serverName)) {
     alert("サーバー名は3〜4桁の数字で入力してください");
     return;
@@ -122,6 +95,16 @@ form.addEventListener("submit", async (e) => {
   if (isNaN(x) || x < 0 || x > 999 || isNaN(y) || y < 0 || y > 999) {
     alert("座標は0〜999の範囲で入力してください");
     return;
+  }
+
+  const snapshot = await get(child(ref(db), "coordinates"));
+  const existingItems = snapshot.exists() ? snapshot.val() : {};
+  for (const key in existingItems) {
+    const item = existingItems[key];
+    if (parseInt(item.X) === x && parseInt(item.Y) === y) {
+      alert(`この座標 X:${x}, Y:${y} はすでに登録されています`);
+      return;
+    }
   }
 
   const data = {
@@ -154,14 +137,9 @@ async function loadMarkers() {
     item._id = key;
     (item.取得状況 === "未取得" ? unclaimedItems : claimedItems).push(item);
 
-    const coords = [item.Y, item.X];
-    const color = levelColors[item.レベル] || "gray";
-
     const marker = L.circleMarker([parseInt(item.Y), parseInt(item.X)], {
-  radius: 1,
-  color: "black",
-  fillOpacity: 1
-}).addTo(map);
+      radius: 1, color: "black", fillOpacity: 1
+    }).addTo(map);
 
     marker.bindPopup(`
       <b>サーバー名: ${item.サーバー名}</b><br>
@@ -175,28 +153,13 @@ async function loadMarkers() {
   }
 }
 
-window.changeStatus = async (key) => {
-  await update(ref(db), { [`coordinates/${key}/取得状況`]: "取得済み" });
-  loadMarkers();
-};
+document.getElementById("toggleUnclaimed").addEventListener("click", () => {
+  openListTab("未取得リスト", unclaimedItems, "unclaimed");
+});
 
-window.restoreStatus = async (key) => {
-  await update(ref(db), { [`coordinates/${key}/取得状況`]: "未取得" });
-  alert("未取得に戻しました！");
-  location.reload();
-};
-
-
-
-window.deleteItem = async function(key) {
-  if (confirm("本当に削除しますか？")) {
-    await update(ref(db), { [`coordinates/${key}`]: null });
-    alert("削除しました！");
-    location.reload();
-  }
-};
-
-
+document.getElementById("toggleClaimed").addEventListener("click", () => {
+  openListTab("取得済みリスト", claimedItems, "claimed");
+});
 
 function openListTab(title, items, type) {
   const win = window.open("", "_blank");
@@ -230,35 +193,27 @@ function openListTab(title, items, type) {
     </style>
     </head>
     <body>
-    <h2>📋 ${title}</h2>
-    <ul>
-      ${items.map(item => `
-        <li>
-          サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}
-          ${
-            type === "unclaimed"
+      <h2>📋 ${title}</h2>
+      <ul>
+        ${items.map(item => `
+          <li>
+            サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}
+            ${type === "unclaimed"
               ? `<button onclick="window.opener.changeStatus('${item._id}')">取得済みに</button>`
-              : `<button onclick="window.opener.restoreStatus('${item._id}')">未取得に戻す</button>`
-          }
-          <button onclick="window.opener.deleteItem('${item._id}')">削除</button>
-        </li>
-      `).join("")}
-    </ul>
+              : `<button onclick="window.opener.restoreStatus('${item._id}')">未取得に戻す</button>`}
+            <button onclick="window.opener.deleteItem('${item._id}')">削除</button>
+          </li>
+        `).join("")}
+      </ul>
     </body>
     </html>
   `);
   win.document.close();
 }
 
-document.getElementById("toggleUnclaimed").addEventListener("click", () => {
-  openListTab("未取得リスト", unclaimedItems, "unclaimed");
-});
-document.getElementById("toggleClaimed").addEventListener("click", () => {
-  openListTab("取得済みリスト", claimedItems, "claimed");
-});
-
 loadMarkers();
 </script>
+
 </body>
 </html>
 
