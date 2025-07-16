@@ -10,7 +10,6 @@
 <body>
 
 <script>
-// ✅ パスワード表示は初回のみ（sessionStorageで制御）
 document.addEventListener("DOMContentLoaded", () => {
   if (!sessionStorage.getItem("authenticated")) {
     const password = prompt("このページにアクセスするにはパスワードを入力してください");
@@ -22,191 +21,20 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 });
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-import { getDatabase, ref, push, get, child, update } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDdNI04D1xhQihN3DBDdF1_YAp6XRcErDw",
-  authDomain: "maps3-986-ffbbd.firebaseapp.com",
-  databaseURL: "https://maps3-986-ffbbd-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "maps3-986-ffbbd",
-  storageBucket: "maps3-986-ffbbd.appspot.com",
-  messagingSenderId: "701191378459",
-  appId: "1:701191378459:web:d2cf8d869f5cba869d0abe"
-};
-
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-window.deleteItem = async function(key) {
-  if (confirm("本当に削除しますか？")) {
-    await update(ref(db), { [`coordinates/${key}`]: null });
-    alert("削除しました！");
-    location.reload();
-  }
-};
-
-window.changeStatus = async function(key) {
-  await update(ref(db), { [`coordinates/${key}/取得状況`]: "取得済み" });
-  alert("取得済みにしました！");
-  location.reload();
-};
-
-window.restoreStatus = async function(key) {
-  await update(ref(db), { [`coordinates/${key}/取得状況`]: "未取得" });
-  alert("未取得に戻しました！");
-  location.reload();
-};
-
-const form = document.getElementById("coordinateForm");
-const map = L.map("map", {
-  crs: L.CRS.Simple,
-  minZoom: -3,
-  maxZoom: 2
-}).setView([500, 500], -2);
-
-const levelColors = {
-  "1": "blue", "2": "lightblue", "3": "green", "4": "lime",
-  "5": "orange", "6": "red", "7": "purple"
-};
-
-// ✅ 1px単位のグリッド描画（1000×1000対応）
-for (let i = 0; i <= 1000; i++) {
-  L.polyline([[i, 0], [i, 1000]], { color: "#ddd", weight: 0.3 }).addTo(map); // 横線
-  L.polyline([[0, i], [1000, i]], { color: "#ddd", weight: 0.3 }).addTo(map); // 縦線
-}
-
-let unclaimedItems = [], claimedItems = [];
-
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const formData = new FormData(form);
-  const serverName = formData.get("サーバー名");
-  const x = parseInt(formData.get("X"));
-  const y = parseInt(formData.get("Y"));
-  const level = formData.get("レベル");
-
-  if (!/^\d{3,4}$/.test(serverName)) {
-    alert("サーバー名は3〜4桁の数字で入力してください");
-    return;
-  }
-  if (isNaN(x) || x < 0 || x > 999 || isNaN(y) || y < 0 || y > 999) {
-    alert("座標は0〜999の範囲で入力してください");
-    return;
-  }
-
-  const snapshot = await get(child(ref(db), "coordinates"));
-  const existingItems = snapshot.exists() ? snapshot.val() : {};
-  for (const key in existingItems) {
-    const item = existingItems[key];
-    if (parseInt(item.X) === x && parseInt(item.Y) === y) {
-      alert(`この座標 X:${x}, Y:${y} はすでに登録されています`);
-      return;
-    }
-  }
-
-  const data = {
-    サーバー名: serverName,
-    X: x,
-    Y: y,
-    レベル: level,
-    取得状況: "未取得"
-  };
-
-  await push(ref(db, "coordinates"), data);
-  alert("登録しました！");
-  form.reset();
-  loadMarkers();
-});
-
-async function loadMarkers() {
-  unclaimedItems = [];
-  claimedItems = [];
-
-  map.eachLayer(layer => {
-    if (layer instanceof L.CircleMarker) map.removeLayer(layer);
-  });
-
-  const snapshot = await get(child(ref(db), "coordinates"));
-  const items = snapshot.exists() ? snapshot.val() : {};
-
-  for (const key in items) {
-    const item = items[key];
-    item._id = key;
-    (item.取得状況 === "未取得" ? unclaimedItems : claimedItems).push(item);
-
-    const marker = L.circleMarker([parseInt(item.Y), parseInt(item.X)], {
-      radius: 1, color: "black", fillOpacity: 1
-    }).addTo(map);
-
-    marker.bindPopup(`
-      <b>サーバー名: ${item.サーバー名}</b><br>
-      レベル: ${item.レベル}<br>
-      状態: ${item.取得状況}<br>
-      ${item.取得状況 === "未取得"
-        ? `<button onclick="window.changeStatus('${item._id}')">取得済みにする</button>`
-        : `<button onclick="window.restoreStatus('${item._id}')">未取得に戻す</button>`}
-      <br><button onclick="window.deleteItem('${item._id}')">削除</button>
-    `);
-  }
-}
-
-document.getElementById("toggleUnclaimed").addEventListener("click", () => {
-  openListTab("未取得リスト", unclaimedItems, "unclaimed");
-});
-
-document.getElementById("toggleClaimed").addEventListener("click", () => {
-  openListTab("取得済みリスト", claimedItems, "claimed");
-});
-
-function openListTab(title, items, type) {
-  const win = window.open("", "_blank");
-  win.document.write(`
-    <html>
-    <head><title>${title}</title>
-    <style>
-      body { font-family: sans-serif; padding: 20px; background:#fafafa; }
-      h2 { color: ${type === "unclaimed" ? "purple" : "green"}; }
-      ul { list-style: none; padding: 0; }
-      li {
-        background: #fff;
-        border: 1px solid #ccc;
-        margin-bottom: 8px;
-        padding: 10px;
-        font-size: 14px;
-      }
-      button {
-        margin-left: 8px;
-        padding: 4px 10px;
-        font-size: 12px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        color: white;
-        background-color: ${type === "unclaimed" ? "#6c63ff" : "darkorange"};
-      }
-      button:hover {
-        background-color: ${type === "unclaimed" ? "#524fcb" : "orangered"};
-      }
-    </style>
-    </head>
-    <body>
-      <h2>📋 ${title}</h2>
-      <ul>
-        ${items.map(item => `
-          <li>
-            サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}
-            ${type === "unclaimed"
-              ? `<button onclick="window.opener.changeStatus('${item._id}')">取得済みに</button>`
-              : `<button onclick="window.opener.restoreStatus('${item._id}')">未取得に戻す</button>`}
-            <button onclick="window.opener.deleteItem('${item._id}')">削除</button>
-          </li>
-        `).join("")}
-      </ul>
-    </body>
-    </html>
+</script>
+<ul>
+      ${items.map(item => `
+        <li>
+          サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}
+          ${type === "unclaimed"
+            ? `<button onclick="window.opener.changeStatus('${item._id}')">取得済みに</button>`
+            : `<button onclick="window.opener.restoreStatus('${item._id}')">未取得に戻す</button>`}
+          <button onclick="window.opener.deleteItem('${item._id}')">削除</button>
+        </li>
+      `).join("")}
+    </ul>
+  </body>
+</html>
   `);
   win.document.close();
 }
@@ -214,6 +42,27 @@ function openListTab(title, items, type) {
 loadMarkers();
 </script>
 
+<h1>座標登録フォーム</h1>
+<form id="coordinateForm">
+  <input type="text" name="サーバー名" placeholder="3〜4桁の数字" required />
+  <input type="number" name="X" placeholder="X座標（0〜999）" required />
+  <input type="number" name="Y" placeholder="Y座標（0〜999）" required />
+  <select name="レベル">
+    <option value="1">Lv1</option>
+    <option value="2">Lv2</option>
+    <option value="3">Lv3</option>
+    <option value="4">Lv4</option>
+    <option value="5">Lv5</option>
+    <option value="6">Lv6</option>
+    <option value="7">Lv7</option>
+  </select>
+  <button type="submit">登録する</button>
+</form>
+
+<div id="map"></div>
+
+<button id="toggleUnclaimed">未取得リストを表示</button>
+<button id="toggleClaimed">取得済みリストを表示</button>
+
 </body>
 </html>
-
