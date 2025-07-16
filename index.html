@@ -80,12 +80,13 @@ const levelColors = {
 };
 
 // 1000×1000 グリッド線を描画
-for (let x = 0; x <= 1000; x += 50) {
-  L.polyline([[0, x], [1000, x]], { color: "#ccc", weight: 0.5 }).addTo(map); // 横線
-}
 for (let y = 0; y <= 1000; y += 50) {
-  L.polyline([[y, 0], [y, 1000]], { color: "#ccc", weight: 0.5 }).addTo(map); // 縦線
+  L.polyline([[y, 0], [y, 1000]], { color: "#ccc", weight: 0.5 }).addTo(map); // 横線
 }
+for (let x = 0; x <= 1000; x += 50) {
+  L.polyline([[0, x], [1000, x]], { color: "#ccc", weight: 0.5 }).addTo(map); // 縦線
+}
+
 
 
 
