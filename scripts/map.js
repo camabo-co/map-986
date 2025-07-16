@@ -32,7 +32,6 @@ const map = L.map("map", {
   maxZoom: 2
 }).setView([500, 500], -2);
 
-// グリッド描画
 for (let i = 0; i <= 1000; i++) {
   L.polyline([[i, 0], [i, 1000]], { color: "#ddd", weight: 0.3 }).addTo(map);
   L.polyline([[0, i], [1000, i]], { color: "#ddd", weight: 0.3 }).addTo(map);
@@ -118,7 +117,7 @@ async function loadMarkers() {
         <b>Lv:</b> ${item.レベル}<br>
         <b>状態:</b> ${item.取得状況}<br>
         <button onclick="changeStatus('${item._id}')">取得済みにする</button><br>
-        <button onclick="deleteItem('${item._id}')">削除</button>
+        <button onclick="handleDelete('${item._id}', '削除しました！')">削除</button>
       `);
     } else {
       claimedItems.push(item);
@@ -145,94 +144,14 @@ window.alertFromList = function (message) {
 window.handleStatusChange = async function(key, newStatus, message) {
   await update(ref(db), { [`coordinates/${key}/取得状況`]: newStatus });
   window.alertFromList(message);
-  location.reload();  // 必要なら
+  loadMarkers();
 };
 
 window.handleDelete = async function(key, message) {
+  if (!confirm("本当に削除しますか？")) return;
   await remove(ref(db, `coordinates/${key}`));
   window.alertFromList(message);
-  location.reload();  // 必要なら
+  loadMarkers();
 };
-
-
-window.deleteItem = async function(key) {
-  if (confirm("本当に削除しますか？")) {
-    await remove(ref(db, `coordinates/${key}`));
-    alert("削除しました！");
-    loadMarkers();
-  }
-};
-
-window.deleteItemAndReload = async function (key, type) {
-  if (confirm("本当に削除しますか？")) {
-    await remove(ref(db, `coordinates/${key}`));
-    alert("削除しました！");
-    loadMarkers();
-    window.openListTab(
-      type === "unclaimed" ? "未取得リスト" : "取得済みリスト",
-      type === "unclaimed" ? unclaimedItems : claimedItems,
-      type
-    );
-  }
-};
-
-document.getElementById("toggleUnclaimed").addEventListener("click", () => {
-  openListTab("未取得リスト", unclaimedItems, "unclaimed");
-});
-
-document.getElementById("toggleClaimed").addEventListener("click", () => {
-  openListTab("取得済みリスト", claimedItems, "claimed");
-});
-
-function openListTab(title, items, type) {
-  const win = window.open("", "_blank");
-  win.document.write(`
-    <html>
-    <head><title>${title}</title>
-    <style>
-      body { font-family: sans-serif; padding: 20px; background:#fafafa; }
-      h2 { color: ${type === "unclaimed" ? "purple" : "green"}; }
-      ul { list-style: none; padding: 0; }
-      li {
-        background: #fff; border: 1px solid #ccc; margin-bottom: 8px;
-        padding: 10px; font-size: 14px;
-      }
-      button {
-        margin-left: 8px; padding: 4px 10px; font-size: 12px;
-        border: none; border-radius: 4px; cursor: pointer;
-        color: white; background-color: ${type === "unclaimed" ? "#6c63ff" : "darkorange"};
-      }
-      button:hover {
-        background-color: ${type === "unclaimed" ? "#524fcb" : "orangered"};
-      }
-      .delete { background: #d9534f; }
-    </style>
-    </head>
-    <body>
-      <h2>📋 ${title}</h2>
-      <ul>
-        ${items.map(item => `
-          <li>
-            サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}<br>
-            ${type === "unclaimed"
-              ? `<button onclick="window.opener.changeStatus('${item._id}')">取得済みに</button>`
-              : `<button onclick="window.opener.restoreStatus('${item._id}')">未取得に戻す</button>`}
-          <button class="delete" onclick="
-  (async () => {
-    await window.opener.deleteItem('${item._id}');
-    window.opener.alertFromList('削除しました！');
-    location.reload();
-  })();
-">削除</button>
-
-
-          </li>
-        `).join("")}
-      </ul>
-    </body>
-    </html>
-  `);
-  win.document.close();
-}
 
 loadMarkers();
