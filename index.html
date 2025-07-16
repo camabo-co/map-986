@@ -113,15 +113,7 @@ form.addEventListener("submit", async (e) => {
     }
   }
 
-  const data = {
-    サーバー名: serverName,
-    X: x,
-    Y: y,
-    レベル: level,
-    取得状況: "未取得"
-  };
 
-  
 
   if (!/^\d{3,4}$/.test(serverName)) {
     alert("サーバー名は3〜4桁の数字で入力してください");
