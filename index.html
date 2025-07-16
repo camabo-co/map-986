@@ -4,9 +4,29 @@
   <meta charset="UTF-8">
   <title>座標マップ</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
-  <link rel="stylesheet" href="style/map.css">
+
+  <!-- 独自スタイル -->
+  <link rel="stylesheet" href="styles/map.css">
+
   <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      background: #f2f2f2;
+    }
+
+    #map {
+      height: 1000px;
+      width: 1000px;
+      margin: 0 auto;
+      background-color: #e6e6e6;
+    }
+
     #controls {
       display: flex;
       flex-wrap: wrap;
@@ -21,19 +41,64 @@
       transform: translateX(-50%);
       z-index: 1000;
     }
+
     #controls form,
     #controls button {
       font-size: 14px;
     }
-    #map {
-      height: 1000px;
-      width: 1000px;
-      margin: 0 auto;
-      background-color: #f2f2f2;
+
+    form input,
+    form select,
+    form button {
+      padding: 8px;
+      font-size: 14px;
+    }
+
+    form button {
+      background-color: #6c63ff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    form button:hover {
+      background-color: #524fcb;
+    }
+
+    #controls button {
+      padding: 6px 12px;
+      margin: 5px;
+      border: none;
+      background-color: #444;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #controls button:hover {
+      background-color: #222;
     }
   </style>
 </head>
 <body>
+
+  <!-- 🔒 パスワード認証（初回のみ） -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      if (!sessionStorage.getItem("authenticated")) {
+        const password = prompt("このページにアクセスするにはパスワードを入力してください");
+        if (password !== "wareranochonnma") {
+          alert("パスワードが違います。アクセスできません。");
+          location.href = "https://www.google.co.jp";
+        } else {
+          sessionStorage.setItem("authenticated", "true");
+        }
+      }
+    });
+  </script>
+
+  <!-- 🔘 上部のフォームとボタン群 -->
   <div id="controls">
     <form id="coordinateForm">
       <label>サーバー名: <input type="text" name="サーバー名" required></label>
@@ -59,25 +124,14 @@
     </div>
   </div>
 
+  <!-- 📍 地図表示エリア -->
   <div id="map"></div>
 
-  <!-- ✅ パスワード認証（初回のみ） -->
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      if (!sessionStorage.getItem("authenticated")) {
-        const password = prompt("このページにアクセスするにはパスワードを入力してください");
-        if (password !== "wareranochonnma") {
-          alert("パスワードが違います。アクセスできません。");
-          location.href = "https://www.google.co.jp";
-        } else {
-          sessionStorage.setItem("authenticated", "true");
-        }
-      }
-    });
-  </script>
-
-  <!-- ✅ Firebase連携＋地図処理 -->
-  <script type="module" src="scripts/map.js"></script>
+  <!-- 📦 Leaflet 本体 -->
   <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+
+  <!-- 🔗 map.js を読み込み（中に openListTab() も含む） -->
+  <script type="module" src="scripts/map.js"></script>
+
 </body>
 </html>
