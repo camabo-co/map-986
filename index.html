@@ -191,9 +191,10 @@ window.deleteItem = async function(key) {
   if (confirm("本当に削除しますか？")) {
     await update(ref(db), { [`coordinates/${key}`]: null });
     alert("削除しました！");
-    loadMarkers();
+    location.reload();
   }
 };
+
 
 
 function openListTab(title, items, type) {
