@@ -4,13 +4,8 @@
   <meta charset="UTF-8">
   <title>座標マップ</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
-
-  <!-- 独自スタイル -->
-  <link rel="stylesheet" href="styles/map.css">
-
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <style>
     body {
       font-family: sans-serif;
@@ -19,119 +14,58 @@
       padding: 0;
       background: #f2f2f2;
     }
-
     #map {
-      height: 1000px;
-      width: 1000px;
+      height: 80vh;
+      width: 100%;
+      max-width: 1000px;
       margin: 0 auto;
       background-color: #e6e6e6;
     }
-
-    #controls {
+    form {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 10px;
-      background: #fff;
-      padding: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1000;
+      gap: 8px;
+      margin: 10px;
     }
-
-    #controls form,
-    #controls button {
+    form input, form select, form button {
+      padding: 6px;
       font-size: 14px;
     }
-
-    form input,
-    form select,
-    form button {
-      padding: 8px;
-      font-size: 14px;
+    .buttons {
+      margin: 10px;
     }
-
-    form button {
-      background-color: #6c63ff;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    form button:hover {
-      background-color: #524fcb;
-    }
-
-    #controls button {
+    .buttons button {
       padding: 6px 12px;
+      font-size: 14px;
       margin: 5px;
-      border: none;
-      background-color: #444;
-      color: white;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    #controls button:hover {
-      background-color: #222;
     }
   </style>
 </head>
 <body>
+  <h1>座標マップ</h1>
+  <form id="coordinateForm">
+    <input type="text" name="サーバー名" placeholder="サーバー名" required>
+    <input type="number" name="X" placeholder="X (0-999)" required>
+    <input type="number" name="Y" placeholder="Y (0-999)" required>
+    <select name="レベル">
+      <option value="1">Lv1</option>
+      <option value="2">Lv2</option>
+      <option value="3">Lv3</option>
+      <option value="4">Lv4</option>
+      <option value="5">Lv5</option>
+      <option value="6">Lv6</option>
+      <option value="7">Lv7</option>
+    </select>
+    <button type="submit">登録</button>
+  </form>
 
-  <!-- 🔒 パスワード認証（初回のみ） -->
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      if (!sessionStorage.getItem("authenticated")) {
-        const password = prompt("このページにアクセスするにはパスワードを入力してください");
-        if (password !== "wareranochonnma") {
-          alert("パスワードが違います。アクセスできません。");
-          location.href = "https://www.google.co.jp";
-        } else {
-          sessionStorage.setItem("authenticated", "true");
-        }
-      }
-    });
-  </script>
-
-  <!-- 🔘 上部のフォームとボタン群 -->
-  <div id="controls">
-    <form id="coordinateForm">
-      <label>サーバー名: <input type="text" name="サーバー名" required></label>
-      <label>X: <input type="number" name="X" min="0" max="999" required></label>
-      <label>Y: <input type="number" name="Y" min="0" max="999" required></label>
-      <label>レベル:
-        <select name="レベル" required>
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-          <option value="6">6</option>
-          <option value="7">7</option>
-        </select>
-      </label>
-      <button type="submit">登録</button>
-    </form>
-
-    <div>
-      <button id="toggleUnclaimed">📋 未取得一覧</button>
-      <button id="toggleClaimed">📋 取得済み一覧</button>
-    </div>
+  <div class="buttons">
+    <button id="toggleUnclaimed">📋 未取得リスト</button>
+    <button id="toggleClaimed">📋 取得済みリスト</button>
   </div>
 
-  <!-- 📍 地図表示エリア -->
   <div id="map"></div>
-
-  <!-- 📦 Leaflet 本体 -->
-  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
-
-  <!-- 🔗 map.js を読み込み（中に openListTab() も含む） -->
-  <script type="module" src="scripts/map.js"></script>
-
+  <script type="module" src="map.js"></script>
 </body>
 </html>
