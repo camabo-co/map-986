@@ -101,6 +101,28 @@ form.addEventListener("submit", async (e) => {
   const y = parseInt(formData.get("Y"));
   const level = formData.get("レベル");
 
+  // ✅ 重複チェック（新しく追加）
+  const snapshot = await get(child(ref(db), "coordinates"));
+  const existingItems = snapshot.exists() ? snapshot.val() : {};
+
+  for (const key in existingItems) {
+    const item = existingItems[key];
+    if (item.X === x && item.Y === y) {
+      alert(`この座標 X:${x}, Y:${y} はすでに登録されています`);
+      return;
+    }
+  }
+
+  const data = {
+    サーバー名: serverName,
+    X: x,
+    Y: y,
+    レベル: level,
+    取得状況: "未取得"
+  };
+
+  
+
   if (!/^\d{3,4}$/.test(serverName)) {
     alert("サーバー名は3〜4桁の数字で入力してください");
     return;
@@ -143,9 +165,11 @@ async function loadMarkers() {
     const coords = [item.Y, item.X];
     const color = levelColors[item.レベル] || "gray";
 
-    const marker = L.circleMarker(coords, {
-      radius: 8, color: color, fillOpacity: 0.8
-    }).addTo(map);
+    const marker = L.circleMarker([parseInt(item.Y), parseInt(item.X)], {
+  radius: 1,
+  color: "black",
+  fillOpacity: 1
+}).addTo(map);
 
     marker.bindPopup(`
       <b>サーバー名: ${item.サーバー名}</b><br>
@@ -169,12 +193,14 @@ window.restoreStatus = async (key) => {
   loadMarkers();
 };
 
-window.deleteItem = async (key) => {
+window.deleteItem = async function(key) {
   if (confirm("本当に削除しますか？")) {
     await update(ref(db), { [`coordinates/${key}`]: null });
+    alert("削除しました！");
     loadMarkers();
   }
 };
+
 
 function openListTab(title, items, type) {
   const win = window.open("", "_blank");
