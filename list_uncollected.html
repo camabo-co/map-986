@@ -2,60 +2,131 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>未取得一覧（レベル別表示＋削除機能）</title>
+  <title>未取得リスト</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body { font-family: sans-serif; padding: 20px; background: #f9f9f9; color: #333; }
-    h2 { color: purple; }
-    h3 { margin-bottom: 5px; }
-    .level-block { margin-bottom: 25px; }
-    ul { list-style: none; padding-left: 0; }
-    li { margin-bottom: 6px; }
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background: #fafafa;
+      text-align: center;
+    }
+    h2 {
+      color: #6c63ff;
+    }
+    input, select {
+      padding: 6px;
+      margin: 10px 5px;
+      font-size: 14px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    li {
+      background: white;
+      border: 1px solid #ccc;
+      margin: 10px 0;
+      padding: 10px;
+      font-size: 14px;
+    }
     button {
       margin-left: 8px;
-      padding: 3px 8px;
+      padding: 4px 10px;
       font-size: 12px;
-      background-color: crimson;
-      color: white;
       border: none;
       border-radius: 4px;
       cursor: pointer;
+      color: white;
+      background-color: #6c63ff;
     }
     button:hover {
-      background-color: darkred;
+      background-color: #524fcb;
     }
   </style>
 </head>
 <body>
-  <h2>📋 未取得一覧（レベル別）</h2>
-  <div id="list">読み込み中...</div>
 
-  <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbyFtje-5ThW4a1ABPfPyOffEWMFLOuRnp_J1Hd2AKgXbcw4dF_RP9tdPIuxepjJLT4/exec";
+<h2>📋 未取得リスト</h2>
 
-    fetch(API_URL)
-      .then(res => res.json())
-      .then(data => {
-        const grouped = {};
-        data.forEach(d => {
-          if (d.取得状況 === "未取得") {
-            (grouped[d.レベル] = grouped[d.レベル] || []).push(d);
-          }
-        });
+<input type="text" id="filterServer" placeholder="🔍 サーバー名で検索">
+<select id="filterLevel">
+  <option value="">🔍 全レベル</option>
+  <option value="1">Lv1</option>
+  <option value="2">Lv2</option>
+  <option value="3">Lv3</option>
+  <option value="4">Lv4</option>
+  <option value="5">Lv5</option>
+  <option value="6">Lv6</option>
+  <option value="7">Lv7</option>
+</select>
 
-        const list = document.getElementById("list");
-        list.innerHTML = "";
+<ul id="listArea"></ul>
 
-        Object.keys(grouped).sort().forEach(level => {
-          const block = document.createElement("div");
-          block.className = "level-block";
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+import { getDatabase, ref, get, child, update } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
-          const title = document.createElement("h3");
-          title.textContent = `レベル ${level}`;
-          block.appendChild(title);
+const firebaseConfig = {
+  apiKey: "AIzaSyDdNI04D1xhQihN3DBDdF1_YAp6XRcErDw",
+  authDomain: "maps3-986-ffbbd.firebaseapp.com",
+  databaseURL: "https://maps3-986-ffbbd-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "maps3-986-ffbbd",
+  storageBucket: "maps3-986-ffbbd.appspot.com",
+  messagingSenderId: "701191378459",
+  appId: "1:701191378459:web:d2cf8d869f5cba869d0abe"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-          const ul = document.createElement("ul");
-          grouped[level].forEach(d => {
-            const li = document.createElement("li");
-            li.textContent = `${d.サーバー名} / X:${d.X}, Y:${d.Y
+// 状態変更
+async function changeStatus(key) {
+  await update(ref(db), { [`coordinates/${key}/取得状況`]: "取得済み" });
+  alert("取得済みに変更しました！");
+  loadList();
+}
+async function deleteItem(key) {
+  if (confirm("本当に削除しますか？")) {
+    await update(ref(db), { [`coordinates/${key}`]: null });
+    alert("削除しました！");
+    loadList();
+  }
+}
 
-Copilot へメッセージを送る
+document.getElementById("filterServer").addEventListener("input", loadList);
+document.getElementById("filterLevel").addEventListener("change", loadList);
+
+async function loadList() {
+  const snap = await get(child(ref(db), "coordinates"));
+  const items = snap.exists() ? snap.val() : {};
+  const listArea = document.getElementById("listArea");
+  listArea.innerHTML = "";
+
+  const serverFilter = document.getElementById("filterServer").value.toLowerCase();
+  const levelFilter = document.getElementById("filterLevel").value;
+
+  for (const key in items) {
+    const item = items[key];
+    if (item.取得状況 !== "未取得") continue;
+
+    if (serverFilter && !item.サーバー名.toLowerCase().includes(serverFilter)) continue;
+    if (levelFilter && item.レベル !== levelFilter) continue;
+
+    const li = document.createElement("li");
+    li.innerHTML = `
+      サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}
+      <br>
+      <button onclick="changeStatus('${key}')">取得済みに</button>
+      <button onclick="deleteItem('${key}')">削除</button>
+    `;
+    listArea.appendChild(li);
+  }
+}
+
+loadList();
+</script>
+
+</body>
+</html>
