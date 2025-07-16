@@ -1,68 +1,105 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>座標マップ（スマホ対応）</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <meta charset="UTF-8">
+  <title>座標マップ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
   <style>
     body {
-      margin: 0;
       font-family: sans-serif;
+      margin: 0;
+      padding: 0;
       text-align: center;
     }
     #map {
-      width: 90vw;
-      height: 90vh;
+      width: 100%;
       max-width: 1000px;
-      max-height: 1000px;
+      height: 80vh;
       margin: 10px auto;
-      background-color: #f2f2f2;
+      background: #f4f4f4;
     }
-    form, .btn-group {
-      padding: 10px;
-      font-size: 16px;
+    form, .filters, .nav-buttons {
+      margin: 10px auto;
+      max-width: 1000px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
     }
-    input, select, button {
-      font-size: 16px;
-      padding: 6px;
-      margin: 4px;
+    label, input, select, button {
+      font-size: 14px;
+      padding: 5px;
     }
-    button {
-      border-radius: 6px;
-      border: none;
-      background-color: #6c63ff;
+    input[type="text"], input[type="number"], select {
+      width: 100px;
+    }
+    .nav-buttons a {
+      text-decoration: none;
+      font-weight: bold;
+      padding: 6px 12px;
+      background: #6c63ff;
       color: white;
-      cursor: pointer;
+      border-radius: 5px;
     }
-    button:hover {
-      background-color: #524fcb;
+    @media (max-width: 600px) {
+      input, select, button {
+        font-size: 12px;
+        padding: 4px;
+      }
+      .nav-buttons a {
+        font-size: 12px;
+        padding: 5px 10px;
+      }
     }
   </style>
 </head>
 <body>
 
-<h2>座標登録マップ</h2>
+<h2>📍 座標登録フォーム</h2>
 <form id="coordinateForm">
-  <input name="サーバー名" placeholder="サーバー名 (例: 986)" required />
-  <input name="X" type="number" placeholder="X (0-999)" required />
-  <input name="Y" type="number" placeholder="Y (0-999)" required />
-  <select name="レベル" required>
-    <option value="" disabled selected>レベル選択</option>
-    <option value="1">Lv1</option>
-    <option value="2">Lv2</option>
-    <option value="3">Lv3</option>
-  </select>
+  <label>サーバー名: <input type="text" name="サーバー名" required></label>
+  <label>X: <input type="number" name="X" required min="0" max="999"></label>
+  <label>Y: <input type="number" name="Y" required min="0" max="999"></label>
+  <label>レベル:
+    <select name="レベル" required>
+      <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+      <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+      <option value="7">7</option>
+    </select>
+  </label>
   <button type="submit">登録</button>
 </form>
 
-<div class="btn-group">
-  <button id="toggleUnclaimed">📋 未取得リスト</button>
-  <button id="toggleClaimed">📋 取得済みリスト</button>
+<div class="filters">
+  <input type="text" id="filterServer" placeholder="🔍 サーバー名で検索">
+  <select id="filterLevel">
+    <option value="">🔍 全レベル</option>
+    <option value="1">Lv1</option><option value="2">Lv2</option><option value="3">Lv3</option>
+    <option value="4">Lv4</option><option value="5">Lv5</option><option value="6">Lv6</option><option value="7">Lv7</option>
+  </select>
+</div>
+
+<div class="nav-buttons">
+  <a href="list_uncollected.html" target="_blank">📋 未取得一覧</a>
+  <a href="list_collected.html" target="_blank">📋 取得済み一覧</a>
 </div>
 
 <div id="map"></div>
+
+<script>
+  // ✅ パスワード制御
+  if (!sessionStorage.getItem("authenticated")) {
+    const password = prompt("このページにアクセスするにはパスワードを入力してください");
+    if (password !== "wareranochonnma") {
+      alert("パスワードが違います。アクセスできません。");
+      location.href = "https://www.google.co.jp";
+    } else {
+      sessionStorage.setItem("authenticated", "true");
+    }
+  }
+</script>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
@@ -77,143 +114,106 @@ const firebaseConfig = {
   messagingSenderId: "701191378459",
   appId: "1:701191378459:web:d2cf8d869f5cba869d0abe"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-const map = L.map("map", { crs: L.CRS.Simple, minZoom: -3, maxZoom: 2 }).setView([500, 500], -2);
+const levelColors = {
+  "1": "blue", "2": "lightblue", "3": "green",
+  "4": "lime", "5": "orange", "6": "red", "7": "purple"
+};
 
-// グリッド描画
+const map = L.map("map", {
+  crs: L.CRS.Simple,
+  minZoom: -3, maxZoom: 2
+}).setView([500, 500], -2);
+
+// グリッド
 for (let i = 0; i <= 1000; i++) {
-  L.polyline([[i, 0], [i, 1000]], { color: "#ccc", weight: 0.2 }).addTo(map);
-  L.polyline([[0, i], [1000, i]], { color: "#ccc", weight: 0.2 }).addTo(map);
+  L.polyline([[i, 0], [i, 1000]], { color: "#ddd", weight: 0.3 }).addTo(map);
+  L.polyline([[0, i], [1000, i]], { color: "#ddd", weight: 0.3 }).addTo(map);
 }
 
-const form = document.getElementById("coordinateForm");
-let unclaimedItems = [], claimedItems = [];
+window.deleteItem = async function (key) {
+  if (confirm("本当に削除しますか？")) {
+    await update(ref(db), { [`coordinates/${key}`]: null });
+    alert("削除しました！");
+    location.reload();
+  }
+};
+window.changeStatus = async function (key) {
+  await update(ref(db), { [`coordinates/${key}/取得状況`]: "取得済み" });
+  alert("取得済みにしました！");
+  location.reload();
+};
+window.restoreStatus = async function (key) {
+  await update(ref(db), { [`coordinates/${key}/取得状況`]: "未取得" });
+  alert("未取得に戻しました！");
+  location.reload();
+};
 
+const form = document.getElementById("coordinateForm");
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   const fd = new FormData(form);
-  const name = fd.get("サーバー名");
-  const x = parseInt(fd.get("X"));
-  const y = parseInt(fd.get("Y"));
-  const level = fd.get("レベル");
+  const x = parseInt(fd.get("X")), y = parseInt(fd.get("Y"));
+  const server = fd.get("サーバー名"), level = fd.get("レベル");
 
-  if (!/^\d{3,4}$/.test(name)) return alert("3〜4桁の数字で入力してください");
-  if (isNaN(x) || x < 0 || x > 999 || isNaN(y) || y < 0 || y > 999) return alert("座標は0〜999で");
+  if (!/^\d{3,4}$/.test(server)) return alert("サーバー名は3〜4桁で");
+  if (isNaN(x) || x < 0 || x > 999 || isNaN(y) || y < 0 || y > 999) return alert("X/Yは0〜999");
 
   const snap = await get(child(ref(db), "coordinates"));
   const data = snap.exists() ? snap.val() : {};
-  for (const key in data) {
-    if (parseInt(data[key].X) === x && parseInt(data[key].Y) === y) {
-      return alert(`座標 X:${x}, Y:${y} は登録済み`);
-    }
+  for (const k in data) {
+    if (+data[k].X === x && +data[k].Y === y) return alert("既に登録済みです");
   }
 
-  await push(ref(db, "coordinates"), {
-    サーバー名: name,
-    X: x,
-    Y: y,
-    レベル: level,
-    取得状況: "未取得"
-  });
-
-  alert("登録しました！");
+  await push(ref(db, "coordinates"), { サーバー名: server, X: x, Y: y, レベル: level, 取得状況: "未取得" });
+  alert("登録完了！");
   form.reset();
   loadMarkers();
 });
 
-async function loadMarkers() {
-  unclaimedItems = [];
-  claimedItems = [];
+// 検索フィルター用
+const filterServer = document.getElementById("filterServer");
+const filterLevel = document.getElementById("filterLevel");
 
-  map.eachLayer(l => { if (l instanceof L.CircleMarker) map.removeLayer(l); });
+filterServer.addEventListener("input", loadMarkers);
+filterLevel.addEventListener("change", loadMarkers);
+
+async function loadMarkers() {
+  map.eachLayer(layer => {
+    if (layer instanceof L.CircleMarker) map.removeLayer(layer);
+  });
 
   const snap = await get(child(ref(db), "coordinates"));
   const items = snap.exists() ? snap.val() : {};
 
+  const serverFilter = filterServer.value.trim().toLowerCase();
+  const levelFilter = filterLevel.value;
+
   for (const key in items) {
     const item = items[key];
-    item._id = key;
-    (item.取得状況 === "未取得" ? unclaimedItems : claimedItems).push(item);
+    const color = item.取得状況 === "未取得" ? (levelColors[item.レベル] || "gray") : "black";
 
-    const marker = L.circleMarker([parseInt(item.Y), parseInt(item.X)], {
-      radius: 1.5, color: "black", fillOpacity: 1
+    // 🔍 フィルター適用
+    if (serverFilter && !item.サーバー名.toLowerCase().includes(serverFilter)) continue;
+    if (levelFilter && item.レベル !== levelFilter) continue;
+
+    const marker = L.circleMarker([+item.Y, +item.X], {
+      radius: 3, color, fillOpacity: 1
     }).addTo(map);
 
     marker.bindPopup(`
       <b>サーバー名: ${item.サーバー名}</b><br>
       レベル: ${item.レベル}<br>
       状態: ${item.取得状況}<br>
-      <button id="status-${key}">${item.取得状況 === "未取得" ? "取得済みに" : "未取得に戻す"}</button>
-      <br><button id="delete-${key}">削除</button>
+      ${item.取得状況 === "未取得"
+        ? `<button onclick="window.changeStatus('${key}')">取得済みに</button>`
+        : `<button onclick="window.restoreStatus('${key}')">未取得に戻す</button>`}
+      <br><button onclick="window.deleteItem('${key}')">削除</button>
     `);
-
-    marker.on("popupopen", () => {
-      document.getElementById(`status-${key}`)?.addEventListener("click", () => {
-        if (item.取得状況 === "未取得") {
-          changeStatus(key);
-        } else {
-          restoreStatus(key);
-        }
-      });
-      document.getElementById(`delete-${key}`)?.addEventListener("click", () => {
-        deleteItem(key);
-      });
-    });
   }
 }
-
-async function changeStatus(key) {
-  await update(ref(db), { [`coordinates/${key}/取得状況`]: "取得済み" });
-  alert("取得済みにしました！");
-  loadMarkers();
-}
-
-async function restoreStatus(key) {
-  await update(ref(db), { [`coordinates/${key}/取得状況`]: "未取得" });
-  alert("未取得に戻しました！");
-  loadMarkers();
-}
-
-async function deleteItem(key) {
-  if (confirm("削除しますか？")) {
-    await update(ref(db), { [`coordinates/${key}`]: null });
-    alert("削除しました！");
-    loadMarkers();
-  }
-}
-
-function openListTab(title, items, type) {
-  const win = window.open("", "_blank");
-  win.document.write(`
-    <html><head><title>${title}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <style>
-      body { font-family: sans-serif; padding: 10px; }
-      li { margin-bottom: 10px; border: 1px solid #ccc; padding: 8px; }
-    </style>
-    </head><body>
-    <h2>${title}</h2>
-    <ul>
-    ${items.map(item => `
-      <li>
-        ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}
-      </li>`).join("")}
-    </ul>
-    </body></html>
-  `);
-  win.document.close();
-}
-
-document.getElementById("toggleUnclaimed").addEventListener("click", () => {
-  openListTab("未取得リスト", unclaimedItems, "unclaimed");
-});
-document.getElementById("toggleClaimed").addEventListener("click", () => {
-  openListTab("取得済みリスト", claimedItems, "claimed");
-});
-
 loadMarkers();
 </script>
 
