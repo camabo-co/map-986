@@ -1,4 +1,3 @@
-// map.js
 import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
@@ -48,6 +47,8 @@ const levelColors = {
 };
 
 let unclaimedItems = [], claimedItems = [];
+let claimedWin = null;
+let unclaimedWin = null;
 
 const form = document.getElementById("coordinateForm");
 form.addEventListener("submit", async (e) => {
@@ -87,7 +88,7 @@ form.addEventListener("submit", async (e) => {
   await push(ref(db, "coordinates"), data);
   alert("登録しました！");
   form.reset();
-  loadMarkers();
+  await loadMarkers();
 });
 
 async function loadMarkers() {
@@ -128,13 +129,15 @@ async function loadMarkers() {
 window.changeStatus = async function(key) {
   await update(ref(db), { [`coordinates/${key}/取得状況`]: "取得済み" });
   alert("更新しました！");
-  loadMarkers();
+  await loadMarkers();
+  if (claimedWin && !claimedWin.closed) openListTab("取得済みリスト", claimedItems, "claimed");
 };
 
 window.restoreStatus = async function(key) {
   await update(ref(db), { [`coordinates/${key}/取得状況`]: "未取得" });
   alert("未取得に戻しました！");
-  loadMarkers();
+  await loadMarkers();
+  if (unclaimedWin && !unclaimedWin.closed) openListTab("未取得リスト", unclaimedItems, "unclaimed");
 };
 
 window.alertFromList = function (message) {
@@ -144,30 +147,34 @@ window.alertFromList = function (message) {
 window.handleStatusChange = async function(key, newStatus, message) {
   await update(ref(db), { [`coordinates/${key}/取得状況`]: newStatus });
   window.alertFromList(message);
-  loadMarkers();
+  await loadMarkers();
+  if (claimedWin && !claimedWin.closed) openListTab("取得済みリスト", claimedItems, "claimed");
+  if (unclaimedWin && !unclaimedWin.closed) openListTab("未取得リスト", unclaimedItems, "unclaimed");
 };
 
 window.handleDelete = async function(key, message) {
   if (!confirm("本当に削除しますか？")) return;
   await remove(ref(db, `coordinates/${key}`));
   window.alertFromList(message);
-  loadMarkers();
+  await loadMarkers();
+  if (claimedWin && !claimedWin.closed) openListTab("取得済みリスト", claimedItems, "claimed");
+  if (unclaimedWin && !unclaimedWin.closed) openListTab("未取得リスト", unclaimedItems, "unclaimed");
 };
 
 loadMarkers();
 
-// 未取得／取得済みリストを新しいタブで開く
+// リストを別タブで開く
 document.getElementById("toggleUnclaimed").addEventListener("click", () => {
   openListTab("未取得リスト", unclaimedItems, "unclaimed");
 });
-
 document.getElementById("toggleClaimed").addEventListener("click", () => {
   openListTab("取得済みリスト", claimedItems, "claimed");
 });
 
 function openListTab(title, items, type) {
-  const win = window.open("", "_blank");
-  win.document.write(`
+  const win = window.open("", type === "unclaimed" ? "unclaimedWin" : "claimedWin");
+
+  const html = `
     <!DOCTYPE html>
     <html lang="ja">
     <head>
@@ -197,15 +204,20 @@ function openListTab(title, items, type) {
           <li>
             サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}<br>
             ${type === "unclaimed"
-              ? `<button onclick="window.opener.handleStatusChange('${item._id}', '取得済み')">取得済みに</button>`
-              : `<button onclick="window.opener.handleStatusChange('${item._id}', '未取得')">未取得に戻す</button>`}
-            <button class="delete" onclick="window.opener.handleDelete('${item._id}', '削除しました！')">削除</button>
+              ? `<button onclick="window.opener.handleStatusChange('${item._id}', '取得済み', '更新しました')">取得済みに</button>`
+              : `<button onclick="window.opener.handleStatusChange('${item._id}', '未取得', '未取得に戻しました')">未取得に戻す</button>`}
+            <button class="delete" onclick="window.opener.handleDelete('${item._id}', '削除しました')">削除</button>
           </li>
         `).join("")}
       </ul>
     </body>
     </html>
-  `);
-  win.document.close();
-}
+  `;
 
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+
+  if (type === "unclaimed") unclaimedWin = win;
+  else claimedWin = win;
+}
