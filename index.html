@@ -70,17 +70,14 @@ const map = L.map("map", {
   maxZoom: 2
 }).setView([500, 500], -2);
 
-// グリッド描画（50刻みで20×20） ← 座標系修正済み
+// ✅ グリッド描画（50刻み／縦横ラインを正しく表示）
 for (let x = 0; x <= 1000; x += 50) {
-  L.polyline([[x, 0], [x, 1000]], { color: "#ddd", weight: 0.5 }).addTo(map); // 縦線
+  L.polyline([[x, 0], [x, 1000]], { color: "#ccc", weight: 0.5 }).addTo(map); // 縦線
 }
 for (let y = 0; y <= 1000; y += 50) {
-  L.polyline([[0, y], [1000, y]], { color: "#ddd", weight: 0.5 }).addTo(map); // 横線
+  L.polyline([[0, y], [1000, y]], { color: "#ccc", weight: 0.5 }).addTo(map); // 横線
 }
-const levelColors = {
-  "1": "blue", "2": "lightblue", "3": "green", "4": "lime",
-  "5": "orange", "6": "red", "7": "purple"
-};
+
 
 let unclaimedItems = [], claimedItems = [];
 
