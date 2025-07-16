@@ -1,95 +1,83 @@
-<style>
-  body {
-    font-family: sans-serif;
-    text-align: center;
-    background-color: #fafafa;
-    margin: 0;
-    padding: 20px;
-  }
+body {
+  font-family: sans-serif;
+  text-align: center;
+  margin: 0;
+  padding: 0;
+  background: #f2f2f2;
+}
 
-  h1, h2 {
-    margin-top: 30px;
-    color: #333;
-  }
+#map {
+  height: 80vh;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  background-color: #e6e6e6;
+}
 
+form {
+  margin: 10px auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+}
+
+form input,
+form select,
+form button {
+  padding: 8px;
+  font-size: 14px;
+}
+
+form button {
+  background-color: #6c63ff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+form button:hover {
+  background-color: #524fcb;
+}
+
+.buttons {
+  margin: 10px;
+}
+
+.buttons button {
+  padding: 6px 12px;
+  font-size: 14px;
+  margin: 5px;
+  border: none;
+  background-color: #444;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.buttons button:hover {
+  background-color: #222;
+}
+
+@media screen and (max-width: 600px) {
   #map {
-    height: 1000px;
-    width: 1000px;
-    margin: 20px auto;
-    background-color: #f2f2f2;
-    border: 2px solid #ccc;
-    box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    height: 60vh;
+    width: 100%;
   }
 
   form {
-    margin-bottom: 30px;
-  }
-
-  label, input, select, button {
-    margin: 5px;
-    padding: 5px 10px;
-    font-size: 14px;
-  }
-
-  button {
-    background-color: #6c63ff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
-
-  button:hover {
-    background-color: #524fcb;
-  }
-
-  ul {
-    list-style: none;
-    padding: 0;
-    margin: 10px auto;
-    max-width: 600px;
-    text-align: left;
-  }
-
-  li {
-    background-color: #fff;
-    border: 1px solid #ddd;
-    margin: 5px 0;
-    padding: 8px 12px;
-    border-radius: 4px;
-    font-size: 14px;
-    display: flex;
-    justify-content: space-between;
+    flex-direction: column;
     align-items: center;
   }
 
-  li button {
-    margin-left: 8px;
+  .buttons {
+    flex-direction: column;
   }
 
-  #toggleUnclaimed,
-  #toggleClaimed {
-    margin: 10px;
-    padding: 8px 14px;
-    font-size: 14px;
-    font-weight: bold;
-    background-color: #00bcd4;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
+  .buttons button {
+    width: 90%;
+    margin: 5px auto;
   }
-
-  #toggleUnclaimed:hover,
-  #toggleClaimed:hover {
-    background-color: #0097a7;
-  }
-
-  a {
-    margin: 0 10px;
-    font-weight: bold;
-    color: purple;
-    text-decoration: none;
-  }
-</style>
+}
