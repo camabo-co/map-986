@@ -1,3 +1,4 @@
+<!-- list_collected.html -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -5,33 +6,11 @@
   <title>取得済みリスト</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body {
-      font-family: sans-serif;
-      padding: 20px;
-      background: #fafafa;
-      text-align: center;
-    }
-    h2 {
-      color: darkorange;
-    }
-    input, select {
-      padding: 6px;
-      margin: 10px 5px;
-      font-size: 14px;
-    }
-    ul {
-      list-style: none;
-      padding: 0;
-      max-width: 800px;
-      margin: 0 auto;
-    }
-    li {
-      background: white;
-      border: 1px solid #ccc;
-      margin: 10px 0;
-      padding: 10px;
-      font-size: 14px;
-    }
+    body { font-family: sans-serif; padding: 20px; background: #fafafa; text-align: center; }
+    h2 { color: darkorange; }
+    input, select { padding: 6px; margin: 10px 5px; font-size: 14px; }
+    ul { list-style: none; padding: 0; max-width: 800px; margin: 0 auto; }
+    li { background: white; border: 1px solid #ccc; margin: 10px 0; padding: 10px; font-size: 14px; }
     button {
       margin-left: 8px;
       padding: 4px 10px;
@@ -48,26 +27,17 @@
   </style>
 </head>
 <body>
-
 <h2>📋 取得済みリスト</h2>
-
 <input type="text" id="filterServer" placeholder="🔍 サーバー名で検索">
 <select id="filterLevel">
   <option value="">🔍 全レベル</option>
-  <option value="1">Lv1</option>
-  <option value="2">Lv2</option>
-  <option value="3">Lv3</option>
-  <option value="4">Lv4</option>
-  <option value="5">Lv5</option>
-  <option value="6">Lv6</option>
-  <option value="7">Lv7</option>
+  <option value="1">Lv1</option><option value="2">Lv2</option><option value="3">Lv3</option>
+  <option value="4">Lv4</option><option value="5">Lv5</option><option value="6">Lv6</option><option value="7">Lv7</option>
 </select>
-
 <ul id="listArea"></ul>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-import { getDatabase, ref, get, child, update } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+import { getDatabase, ref, get, child, update, remove } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDdNI04D1xhQihN3DBDdF1_YAp6XRcErDw",
@@ -83,14 +53,19 @@ const db = getDatabase(app);
 
 async function restoreStatus(key) {
   await update(ref(db), { [`coordinates/${key}/取得状況`]: "未取得" });
-  alert("未取得に戻しました！");
+  alert("更新しました！");
   loadList();
 }
+
 async function deleteItem(key) {
-  if (confirm("本当に削除しますか？")) {
-    await update(ref(db), { [`coordinates/${key}`]: null });
-    alert("削除しました！");
-    loadList();
+  try {
+    if (confirm("本当に削除しますか？")) {
+      await remove(ref(db, "coordinates/" + key));
+      alert("削除しました！");
+      loadList();
+    }
+  } catch (e) {
+    alert("削除に失敗しました: " + e.message);
   }
 }
 
@@ -102,17 +77,13 @@ async function loadList() {
   const items = snap.exists() ? snap.val() : {};
   const listArea = document.getElementById("listArea");
   listArea.innerHTML = "";
-
   const serverFilter = document.getElementById("filterServer").value.toLowerCase();
   const levelFilter = document.getElementById("filterLevel").value;
-
   for (const key in items) {
     const item = items[key];
     if (item.取得状況 !== "取得済み") continue;
-
     if (serverFilter && !item.サーバー名.toLowerCase().includes(serverFilter)) continue;
     if (levelFilter && item.レベル !== levelFilter) continue;
-
     const li = document.createElement("li");
     li.innerHTML = `
       サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}
@@ -126,6 +97,5 @@ async function loadList() {
 
 loadList();
 </script>
-
 </body>
 </html>
