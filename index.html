@@ -69,6 +69,15 @@ const map = L.map("map", {
   minZoom: -3,
   maxZoom: 2
 }).setView([500, 500], -2);
+const levelColors = {
+  "1": "blue",
+  "2": "lightblue",
+  "3": "green",
+  "4": "lime",
+  "5": "orange",
+  "6": "red",
+  "7": "purple"
+};
 
 // 1000×1000 グリッド線を描画
 for (let x = 0; x <= 1000; x += 50) {
@@ -77,6 +86,7 @@ for (let x = 0; x <= 1000; x += 50) {
 for (let y = 0; y <= 1000; y += 50) {
   L.polyline([[y, 0], [y, 1000]], { color: "#ccc", weight: 0.5 }).addTo(map); // 縦線
 }
+
 
 
 
