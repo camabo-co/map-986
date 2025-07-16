@@ -81,10 +81,10 @@ const levelColors = {
 
 // 1000×1000 グリッド線を描画
 for (let y = 0; y <= 1000; y += 50) {
-  L.polyline([[y, 0], [y, 1000]], { color: "#ccc", weight: 0.5 }).addTo(map); // 横線
+  L.polyline([[y, 0], [y, 1000]], { color: "#ccc", weight: 1 }).addTo(map); // 横線
 }
 for (let x = 0; x <= 1000; x += 50) {
-  L.polyline([[0, x], [1000, x]], { color: "#ccc", weight: 0.5 }).addTo(map); // 縦線
+  L.polyline([[0, x], [1000, x]], { color: "#ccc", weight: 1 }).addTo(map); // 縦線
 }
 
 
@@ -180,10 +180,12 @@ window.changeStatus = async (key) => {
   loadMarkers();
 };
 
-window.restoreStatus = async (key) => {
-  await update(ref(db), { [`coordinates/${key}/取得状況`]: "未取得" });
-  loadMarkers();
+window.changeStatus = async (key) => {
+  await update(...);
+  alert("取得済みにしました！");
+  location.reload();
 };
+
 
 window.deleteItem = async function(key) {
   if (confirm("本当に削除しますか？")) {
