@@ -155,3 +155,12 @@ window.handleDelete = async function(key, message) {
 };
 
 loadMarkers();
+// 未取得／取得済みリストを新しいタブで開く
+document.getElementById("toggleUnclaimed").addEventListener("click", () => {
+  window.open("list_uncollected.html", "_blank");
+});
+
+document.getElementById("toggleClaimed").addEventListener("click", () => {
+  window.open("list_collected.html", "_blank");
+});
+
