@@ -217,7 +217,12 @@ function openListTab(title, items, type) {
             ${type === "unclaimed"
               ? `<button onclick="window.opener.changeStatus('${item._id}')">取得済みに</button>`
               : `<button onclick="window.opener.restoreStatus('${item._id}')">未取得に戻す</button>`}
-            <button class="delete" onclick="window.opener.deleteItemAndReload('${item._id}', '${type}')">削除</button>
+           <button class="delete" onclick="
+  window.opener.deleteItem('${item._id}');
+  window.opener.alertFromList('削除しました！');
+  location.reload();
+">削除</button>
+
           </li>
         `).join("")}
       </ul>
