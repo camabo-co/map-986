@@ -155,12 +155,57 @@ window.handleDelete = async function(key, message) {
 };
 
 loadMarkers();
+
 // 未取得／取得済みリストを新しいタブで開く
 document.getElementById("toggleUnclaimed").addEventListener("click", () => {
-  window.open("list_uncollected.html", "_blank");
+  openListTab("未取得リスト", unclaimedItems, "unclaimed");
 });
 
 document.getElementById("toggleClaimed").addEventListener("click", () => {
-  window.open("list_collected.html", "_blank");
+  openListTab("取得済みリスト", claimedItems, "claimed");
 });
+
+function openListTab(title, items, type) {
+  const win = window.open("", "_blank");
+  win.document.write(`
+    <!DOCTYPE html>
+    <html lang="ja">
+    <head>
+      <meta charset="UTF-8">
+      <title>${title}</title>
+      <style>
+        body { font-family: sans-serif; padding: 20px; background: #fafafa; }
+        h2 { color: ${type === "unclaimed" ? "#6c63ff" : "darkgreen"}; }
+        ul { list-style: none; padding: 0; }
+        li {
+          background: white; border: 1px solid #ccc; margin-bottom: 8px;
+          padding: 10px; font-size: 14px;
+        }
+        button {
+          margin-right: 8px; padding: 5px 10px; font-size: 13px;
+          background: ${type === "unclaimed" ? "#6c63ff" : "darkorange"};
+          color: white; border: none; border-radius: 4px;
+          cursor: pointer;
+        }
+        button.delete { background: #d9534f; }
+      </style>
+    </head>
+    <body>
+      <h2>📋 ${title}</h2>
+      <ul>
+        ${items.map(item => `
+          <li>
+            サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}<br>
+            ${type === "unclaimed"
+              ? `<button onclick="window.opener.handleStatusChange('${item._id}', '取得済み')">取得済みに</button>`
+              : `<button onclick="window.opener.handleStatusChange('${item._id}', '未取得')">未取得に戻す</button>`}
+            <button class="delete" onclick="window.opener.handleDelete('${item._id}', '削除しました！')">削除</button>
+          </li>
+        `).join("")}
+      </ul>
+    </body>
+    </html>
+  `);
+  win.document.close();
+}
 
