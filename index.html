@@ -180,10 +180,12 @@ window.changeStatus = async (key) => {
   loadMarkers();
 };
 
-window.changeStatus = async (key) => {
-  await update(...);
-  alert("取得済みにしました！");
+window.restoreStatus = async (key) => {
+  await update(ref(db), { [`coordinates/${key}/取得状況`]: "未取得" });
+  alert("未取得に戻しました！");
   location.reload();
+};
+
 };
 
 
