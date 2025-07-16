@@ -1,38 +1,83 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>座標マップ</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="style/map.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="styles/map.css">
+  <style>
+    #controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      background: #fff;
+      padding: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+    }
+    #controls form,
+    #controls button {
+      font-size: 14px;
+    }
+    #map {
+      height: 1000px;
+      width: 1000px;
+      margin: 0 auto;
+      background-color: #f2f2f2;
+    }
+  </style>
 </head>
 <body>
-  <div id="map"></div>
+  <div id="controls">
+    <form id="coordinateForm">
+      <label>サーバー名: <input type="text" name="サーバー名" required></label>
+      <label>X: <input type="number" name="X" min="0" max="999" required></label>
+      <label>Y: <input type="number" name="Y" min="0" max="999" required></label>
+      <label>レベル:
+        <select name="レベル" required>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="7">7</option>
+        </select>
+      </label>
+      <button type="submit">登録</button>
+    </form>
 
-  <form id="coordinateForm">
-    <input type="text" name="サーバー名" placeholder="サーバー名 (3～4桁)" required>
-    <input type="number" name="X" placeholder="X (0～999)" required>
-    <input type="number" name="Y" placeholder="Y (0～999)" required>
-    <select name="レベル">
-      <option value="1">Lv1</option>
-      <option value="2">Lv2</option>
-      <option value="3">Lv3</option>
-      <option value="4">Lv4</option>
-      <option value="5">Lv5</option>
-      <option value="6">Lv6</option>
-      <option value="7">Lv7</option>
-    </select>
-    <button type="submit">登録</button>
-  </form>
-
-  <div class="buttons">
-    <button id="toggleUnclaimed">📋 未取得一覧</button>
-    <button id="toggleClaimed">📋 取得済み一覧</button>
+    <div>
+      <button id="toggleUnclaimed">📋 未取得一覧</button>
+      <button id="toggleClaimed">📋 取得済み一覧</button>
+    </div>
   </div>
 
-  <!-- ✅ 修正済みのスクリプトパス -->
+  <div id="map"></div>
+
+  <!-- ✅ パスワード認証（初回のみ） -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      if (!sessionStorage.getItem("authenticated")) {
+        const password = prompt("このページにアクセスするにはパスワードを入力してください");
+        if (password !== "wareranochonnma") {
+          alert("パスワードが違います。アクセスできません。");
+          location.href = "https://www.google.co.jp";
+        } else {
+          sessionStorage.setItem("authenticated", "true");
+        }
+      }
+    });
+  </script>
+
+  <!-- ✅ Firebase連携＋地図処理 -->
   <script type="module" src="scripts/map.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
 </body>
 </html>

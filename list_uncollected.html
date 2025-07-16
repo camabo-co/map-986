@@ -88,12 +88,13 @@ async function loadList() {
     if (levelFilter && item.レベル !== levelFilter) continue;
 
     const li = document.createElement("li");
-    li.innerHTML = `
-      サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}
-      <br>
-      <button onclick="changeStatus('${key}')">取得済みに</button>
-      <button onclick="deleteItem('${key}')">削除</button>
-    `;
+    
+li.innerHTML = `
+  サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}<br>
+  <button onclick="window.opener.handleStatusChange('${key}', '取得済み', '更新しました')">取得済みに</button>
+  <button onclick="window.opener.handleDelete('${key}', '削除しました')">削除</button>
+`;
+
     listArea.appendChild(li);
   }
 }
