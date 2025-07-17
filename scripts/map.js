@@ -1,4 +1,8 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+// map.js
+import {
+  initializeApp
+} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+
 import {
   getDatabase,
   ref,
@@ -34,12 +38,18 @@ for (let i = 0; i <= 1000; i++) {
 }
 
 const levelColors = {
-  "1": "blue", "2": "lightblue", "3": "green",
-  "4": "lime", "5": "orange", "6": "red", "7": "purple"
+  "1": "blue",
+  "2": "lightblue",
+  "3": "green",
+  "4": "lime",
+  "5": "orange",
+  "6": "red",
+  "7": "purple"
 };
 
 let unclaimedItems = [], claimedItems = [];
-let claimedWin = null, unclaimedWin = null;
+let claimedWin = null;
+let unclaimedWin = null;
 
 const form = document.getElementById("coordinateForm");
 form.addEventListener("submit", async (e) => {
@@ -49,7 +59,6 @@ form.addEventListener("submit", async (e) => {
   const x = parseInt(formData.get("X"));
   const y = parseInt(formData.get("Y"));
   const level = formData.get("レベル");
-  const mark = formData.get("目印"); // 🔵目印の入力取得
 
   if (!/^\d{3,4}$/.test(serverName)) {
     alert("サーバー名は3〜4桁の数字で入力してください");
@@ -75,8 +84,7 @@ form.addEventListener("submit", async (e) => {
     X: x,
     Y: y,
     レベル: level,
-    取得状況: "未取得",
-    目印: mark || "" // 🔵Firebaseに目印を保存
+    取得状況: "未取得"
   };
   await push(ref(db, "coordinates"), data);
   alert("登録しました！");
@@ -104,6 +112,7 @@ async function loadMarkers() {
         color: levelColors[item.レベル] || "black",
         fillOpacity: 1
       }).addTo(map);
+
       marker.bindPopup(`
         <b>サーバー名:</b> ${item.サーバー名}<br>
         <b>Lv:</b> ${item.レベル}<br>
@@ -116,6 +125,7 @@ async function loadMarkers() {
     }
   }
 }
+
 window.changeStatus = async function(key) {
   await update(ref(db), { [`coordinates/${key}/取得状況`]: "取得済み" });
   alert("更新しました！");
@@ -143,6 +153,8 @@ function refreshListTabs() {
   if (claimedWin && !claimedWin.closed) openListTab("取得済みリスト", claimedItems, "claimed");
 }
 
+loadMarkers();
+
 document.getElementById("toggleUnclaimed").addEventListener("click", () => {
   openListTab("未取得リスト", unclaimedItems, "unclaimed");
 });
@@ -153,16 +165,6 @@ document.getElementById("toggleClaimed").addEventListener("click", () => {
 
 function openListTab(title, items, type) {
   const win = window.open("", type === "unclaimed" ? "unclaimedWin" : "claimedWin");
-  items.sort((a, b) => {
-    const lv = parseInt(a.レベル) - parseInt(b.レベル);
-    if (lv !== 0) return lv;
-    const s = a.サーバー名.localeCompare(b.サーバー名, 'ja');
-    if (s !== 0) return s;
-    const x = parseInt(a.X) - parseInt(b.X);
-    if (x !== 0) return x;
-    return parseInt(a.Y) - parseInt(b.Y);
-  });
-
   const html = `
     <!DOCTYPE html>
     <html lang="ja">
@@ -192,7 +194,6 @@ function openListTab(title, items, type) {
         ${items.map(item => `
           <li>
             サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}<br>
-            ${type === "unclaimed" && item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""}
             ${type === "unclaimed"
               ? `<button onclick="window.opener.handleStatusChange('${item._id}', '取得済み', '更新しました')">取得済みに</button>`
               : `<button onclick="window.opener.handleStatusChange('${item._id}', '未取得', '未取得に戻しました')">未取得に戻す</button>`}
@@ -203,6 +204,7 @@ function openListTab(title, items, type) {
     </body>
     </html>
   `;
+
   win.document.open();
   win.document.write(html);
   win.document.close();
