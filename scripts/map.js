@@ -49,7 +49,7 @@ form.addEventListener("submit", async (e) => {
   const x = parseInt(formData.get("X"));
   const y = parseInt(formData.get("Y"));
   const level = formData.get("レベル");
-  const mark = formData.get("目印");  // 🔵 追加ポイント
+  const mark = formData.get("目印"); // 🔵目印の入力取得
 
   if (!/^\d{3,4}$/.test(serverName)) {
     alert("サーバー名は3〜4桁の数字で入力してください");
@@ -76,7 +76,7 @@ form.addEventListener("submit", async (e) => {
     Y: y,
     レベル: level,
     取得状況: "未取得",
-    目印: mark || ""  // 🔵 追加ポイント
+    目印: mark || "" // 🔵Firebaseに目印を保存
   };
   await push(ref(db, "coordinates"), data);
   alert("登録しました！");
@@ -104,16 +104,10 @@ async function loadMarkers() {
         color: levelColors[item.レベル] || "black",
         fillOpacity: 1
       }).addTo(map);
-
-      if (item.目印) {
-        marker.bindTooltip(item.目印, { permanent: false, direction: "top" });  // 🔵 ツールチップ表示
-      }
-
       marker.bindPopup(`
         <b>サーバー名:</b> ${item.サーバー名}<br>
         <b>Lv:</b> ${item.レベル}<br>
         <b>状態:</b> ${item.取得状況}<br>
-        ${item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""}
         <button onclick="changeStatus('${item._id}')">取得済みにする</button><br>
         <button onclick="handleDelete('${item._id}', '削除しました！')">削除</button>
       `);
@@ -198,7 +192,7 @@ function openListTab(title, items, type) {
         ${items.map(item => `
           <li>
             サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}<br>
-            ${item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""} <!-- 🔵 目印表示 -->
+            ${type === "unclaimed" && item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""}
             ${type === "unclaimed"
               ? `<button onclick="window.opener.handleStatusChange('${item._id}', '取得済み', '更新しました')">取得済みに</button>`
               : `<button onclick="window.opener.handleStatusChange('${item._id}', '未取得', '未取得に戻しました')">未取得に戻す</button>`}
@@ -209,7 +203,6 @@ function openListTab(title, items, type) {
     </body>
     </html>
   `;
-
   win.document.open();
   win.document.write(html);
   win.document.close();
