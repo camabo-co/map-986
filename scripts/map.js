@@ -127,14 +127,15 @@ function handleDelete(key, message) {
   });
 }
 window.handleDelete = handleDelete;
+window.handleDelete = async function(key, message) {
+  if (!confirm("本当に削除しますか？")) return;
+  await remove(ref(db, `coordinates/${key}`));
+  alert(message);
+  await loadMarkers();
+  refreshListTabs();
+};
 
-function handleStatusChange(key, newStatus, message) {
-  update(ref(db), { [`coordinates/${key}/取得状況`]: newStatus }).then(() => {
-    alert(message);
-    loadMarkers();
-    refreshListTabs();
-  });
-}
+
 window.handleStatusChange = handleStatusChange;
 
 function refreshListTabs() {
