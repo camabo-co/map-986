@@ -7,12 +7,37 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <style>
-    body { font-family: sans-serif; text-align: center; background: #f2f2f2; }
-    #map { height: 80vh; width: 100%; max-width: 1000px; margin: 0 auto; background-color: #e6e6e6; }
-    form { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 10px auto; }
-    input, select, button { padding: 6px; font-size: 14px; }
-    .buttons { margin: 10px; }
-    .buttons button { margin: 5px; padding: 6px 12px; font-size: 14px; }
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background: #f2f2f2;
+    }
+    #map {
+      height: 80vh;
+      width: 100%;
+      max-width: 1000px;
+      margin: 0 auto;
+      background-color: #e6e6e6;
+    }
+    form {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin: 10px auto;
+    }
+    input, select, button {
+      padding: 6px;
+      font-size: 14px;
+    }
+    .buttons {
+      margin: 10px;
+    }
+    .buttons button {
+      margin: 5px;
+      padding: 6px 12px;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
@@ -46,11 +71,13 @@
     <option value="6">Lv6</option>
     <option value="7">Lv7</option>
   </select>
+  <input type="text" name="目印" placeholder="目印（任意）">
   <button type="submit">登録</button>
 </form>
 
 <div id="map"></div>
 
+<!-- 修正済み map.js を読み込み -->
 <script type="module" src="scripts/map.js"></script>
 
 </body>
