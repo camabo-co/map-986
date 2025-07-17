@@ -141,7 +141,12 @@ document.getElementById("toggleClaimed").addEventListener("click", () => {
 });
 
 function showList(title, items, type) {
-  const win = window.open("", "_blank");
+  items.sort((a, b) => {
+  const levelDiff = parseInt(a.レベル) - parseInt(b.レベル);
+  if (levelDiff !== 0) return levelDiff;
+  return parseInt(a.X) - parseInt(b.X);
+});
+const win = window.open("", "_blank");
   win.document.write(`
     <html>
     <head>
