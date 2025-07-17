@@ -126,7 +126,13 @@ function handleDelete(key, message) {
     refreshListTabs();
   });
 }
-window.handleDelete = handleDelete;
+// 🔽 これが抜けていたことでエラーになっています
+window.handleStatusChange = async function(key, newStatus, message) {
+  await update(ref(db), { [`coordinates/${key}/取得状況`]: newStatus });
+  alert(message);
+  await loadMarkers();
+  refreshListTabs();
+};
 window.handleDelete = async function(key, message) {
   if (!confirm("本当に削除しますか？")) return;
   await remove(ref(db, `coordinates/${key}`));
