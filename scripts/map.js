@@ -1,4 +1,4 @@
-// map.js
+// 修正済み map.js
 import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
@@ -165,6 +165,15 @@ document.getElementById("toggleClaimed").addEventListener("click", () => {
 
 function openListTab(title, items, type) {
   const win = window.open("", type === "unclaimed" ? "unclaimedWin" : "claimedWin");
+  items.sort((a, b) => {
+    const lv = parseInt(a.レベル) - parseInt(b.レベル);
+    if (lv !== 0) return lv;
+    const s = a.サーバー名.localeCompare(b.サーバー名, 'ja');
+    if (s !== 0) return s;
+    const x = parseInt(a.X) - parseInt(b.X);
+    if (x !== 0) return x;
+    return parseInt(a.Y) - parseInt(b.Y);
+  });
   const html = `
     <!DOCTYPE html>
     <html lang="ja">
@@ -204,7 +213,6 @@ function openListTab(title, items, type) {
     </body>
     </html>
   `;
-
   win.document.open();
   win.document.write(html);
   win.document.close();
