@@ -1,3 +1,4 @@
+// ✅ map.js 完全版 - Firebase + Leaflet 対応済
 import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
@@ -12,6 +13,7 @@ import {
   remove
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
+// ✅ Firebase初期化
 const firebaseConfig = {
   apiKey: "AIzaSyDdNI04D1xhQihN3DBDdF1_YAp6XRcErDw",
   authDomain: "maps3-986-ffbbd.firebaseapp.com",
@@ -25,6 +27,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
+// ✅ 地図初期化
 const map = L.map("map", {
   crs: L.CRS.Simple,
   minZoom: -3,
@@ -49,6 +52,7 @@ const levelColors = {
 let unclaimedItems = [], claimedItems = [];
 let claimedWin = null, unclaimedWin = null;
 
+// ✅ フォーム送信処理
 const form = document.getElementById("coordinateForm");
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -87,6 +91,7 @@ form.addEventListener("submit", async (e) => {
   await loadMarkers();
 });
 
+// ✅ マーカー読み込み
 async function loadMarkers() {
   unclaimedItems = [], claimedItems = [];
   map.eachLayer(layer => {
@@ -121,16 +126,26 @@ async function loadMarkers() {
   }
 }
 
+// ✅ 状態変更関数（ポップアップ）
 window.changeStatus = async function(key) {
   await update(ref(db), { [`coordinates/${key}/取得状況`]: "取得済み" });
   await loadMarkers();
   refreshListTabs();
 };
 
+// ✅ 削除関数
 window.handleDelete = async function(key) {
   if (!confirm("本当に削除しますか？")) return;
   await remove(ref(db, `coordinates/${key}`));
   alert("削除しました！");
+  await loadMarkers();
+  refreshListTabs();
+};
+
+// ✅ リストからの状態変更（取得⇔未取得）
+window.handleStatusChange = async function (key, status, message) {
+  await update(ref(db), { [`coordinates/${key}/取得状況`]: status });
+  alert(message);
   await loadMarkers();
   refreshListTabs();
 };
@@ -140,6 +155,7 @@ function refreshListTabs() {
   if (claimedWin && !claimedWin.closed) openListTab("取得済みリスト", claimedItems, "claimed");
 }
 
+// ✅ 初回読み込み
 loadMarkers();
 
 document.getElementById("toggleUnclaimed").addEventListener("click", () => {
@@ -150,6 +166,7 @@ document.getElementById("toggleClaimed").addEventListener("click", () => {
   openListTab("取得済みリスト", claimedItems, "claimed");
 });
 
+// ✅ リスト画面表示
 function openListTab(title, items, type) {
   const win = window.open("", type === "unclaimed" ? "unclaimedWin" : "claimedWin");
   const sortedItems = [...items].sort((a, b) => {
@@ -187,7 +204,7 @@ function openListTab(title, items, type) {
           ${type === "unclaimed"
             ? `<button onclick="window.opener.handleStatusChange('${item._id}', '取得済み', '更新しました')">取得済みに</button>`
             : `<button onclick="window.opener.handleStatusChange('${item._id}', '未取得', '未取得に戻しました')">未取得に戻す</button>`}
-          <button class="delete" onclick="window.opener.handleDelete('${item._id}', '削除しました')">削除</button>
+          <button class="delete" onclick="window.opener.handleDelete('${item._id}')">削除</button>
         </li>
         `).join("")}
       </ul>
@@ -199,16 +216,3 @@ function openListTab(title, items, type) {
   if (type === "unclaimed") unclaimedWin = win;
   else claimedWin = win;
 }
-
-window.addEventListener("message", async (event) => {
-  const { action, key, status } = event.data;
-  if (action === "changeStatus") {
-    await update(ref(db), { [`coordinates/${key}/取得状況`]: status });
-    await loadMarkers();
-    refreshListTabs();
-  } else if (action === "delete") {
-    await remove(ref(db, `coordinates/${key}`));
-    await loadMarkers();
-    refreshListTabs();
-  }
-});
