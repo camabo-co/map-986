@@ -57,6 +57,7 @@ form.addEventListener("submit", async (e) => {
   const x = parseInt(formData.get("X"));
   const y = parseInt(formData.get("Y"));
   const level = formData.get("レベル");
+  const mark = formData.get("目印");
 
   if (!/^\d{3,4}$/.test(serverName) || isNaN(x) || x < 0 || x > 999 || isNaN(y) || y < 0 || y > 999) {
     alert("入力内容を確認してください");
@@ -79,6 +80,7 @@ form.addEventListener("submit", async (e) => {
     Y: y,
     レベル: level,
     取得状況: "未取得"
+    目印: mark
   });
   alert("登録しました！");
   form.reset();
