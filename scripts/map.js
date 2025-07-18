@@ -79,7 +79,7 @@ form.addEventListener("submit", async (e) => {
     X: x,
     Y: y,
     レベル: level,
-    取得状況: "未取得"
+    取得状況: "未取得",
     目印: mark
   });
   alert("登録しました！");
