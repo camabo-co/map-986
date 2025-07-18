@@ -178,13 +178,15 @@ function openListTab(title, items, type) {
       <h2>📋 ${title}</h2>
       <ul>
         ${sortedItems.map(item => `
-          <li>
-            サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}<br>
-            ${type === "unclaimed"
-              ? `<button onclick="window.opener.postMessage({ action: 'changeStatus', key: '${item._id}', status: '取得済み' }, '*')">取得済みに</button>`
-              : `<button onclick="window.opener.postMessage({ action: 'changeStatus', key: '${item._id}', status: '未取得' }, '*')">未取得に戻す</button>`}
-            <button class="delete" onclick="window.opener.postMessage({ action: 'delete', key: '${item._id}' }, '*')">削除</button>
-          </li>
+         <li>
+  サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}<br>
+  ${type === "unclaimed" && item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""}
+  ${type === "unclaimed"
+    ? `<button onclick="window.opener.handleStatusChange('${item._id}', '取得済み', '更新しました')">取得済みに</button>`
+    : `<button onclick="window.opener.handleStatusChange('${item._id}', '未取得', '未取得に戻しました')">未取得に戻す</button>`}
+  <button class="delete" onclick="window.opener.handleDelete('${item._id}', '削除しました')">削除</button>
+</li>
+
         `).join("")}
       </ul>
     </body>
