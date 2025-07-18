@@ -80,7 +80,7 @@ form.addEventListener("submit", async (e) => {
     Y: y,
     レベル: level,
     取得状況: "未取得",
-    目印: mark
+    目印: mark || ""
   });
   alert("登録しました！");
   form.reset();
@@ -111,6 +111,7 @@ async function loadMarkers() {
         <b>サーバー名:</b> ${item.サーバー名}<br>
         <b>Lv:</b> ${item.レベル}<br>
         <b>状態:</b> ${item.取得状況}<br>
+        ${item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""}
         <button onclick="changeStatus('${item._id}')">取得済みに</button><br>
         <button onclick="handleDelete('${item._id}')">削除</button>
       `);
@@ -181,14 +182,13 @@ function openListTab(title, items, type) {
       <ul>
         ${sortedItems.map(item => `
          <li>
-  サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}<br>
-  ${type === "unclaimed" && item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""}
-  ${type === "unclaimed"
-    ? `<button onclick="window.opener.handleStatusChange('${item._id}', '取得済み', '更新しました')">取得済みに</button>`
-    : `<button onclick="window.opener.handleStatusChange('${item._id}', '未取得', '未取得に戻しました')">未取得に戻す</button>`}
-  <button class="delete" onclick="window.opener.handleDelete('${item._id}', '削除しました')">削除</button>
-</li>
-
+          サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}<br>
+          ${type === "unclaimed" && item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""}
+          ${type === "unclaimed"
+            ? `<button onclick="window.opener.handleStatusChange('${item._id}', '取得済み', '更新しました')">取得済みに</button>`
+            : `<button onclick="window.opener.handleStatusChange('${item._id}', '未取得', '未取得に戻しました')">未取得に戻す</button>`}
+          <button class="delete" onclick="window.opener.handleDelete('${item._id}', '削除しました')">削除</button>
+        </li>
         `).join("")}
       </ul>
     </body>
@@ -200,7 +200,6 @@ function openListTab(title, items, type) {
   else claimedWin = win;
 }
 
-// ✅ メッセージ受信処理（postMessage 対応）
 window.addEventListener("message", async (event) => {
   const { action, key, status } = event.data;
   if (action === "changeStatus") {
