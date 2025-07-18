@@ -133,8 +133,8 @@ window.changeStatus = async function(key) {
   refreshListTabs();
 };
 
-// ✅ 削除関数
-window.handleDelete = async function(key, message) {
+// ✅ 削除関数（message は省略可にする）
+window.handleDelete = async function(key, message = "削除しました") {
   try {
     if (!confirm("本当に削除しますか？")) return;
     await remove(ref(db, `coordinates/${key}`));
@@ -146,6 +146,7 @@ window.handleDelete = async function(key, message) {
     alert("削除に失敗しました");
   }
 };
+
 
 
 // ✅ リストからの状態変更（取得⇔未取得）
@@ -210,7 +211,8 @@ function openListTab(title, items, type) {
           ${type === "unclaimed"
             ? `<button onclick="window.opener.handleStatusChange('${item._id}', '取得済み', '更新しました')">取得済みに</button>`
             : `<button onclick="window.opener.handleStatusChange('${item._id}', '未取得', '未取得に戻しました')">未取得に戻す</button>`}
-          <button class="delete" onclick="window.opener.handleDelete('${item._id}')">削除</button>
+         <button class="delete" onclick="window.opener.handleDelete('${item._id}', '削除しました')">削除</button>
+
         </li>
         `).join("")}
       </ul>
