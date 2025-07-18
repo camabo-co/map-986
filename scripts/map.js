@@ -134,13 +134,19 @@ window.changeStatus = async function(key) {
 };
 
 // ✅ 削除関数
-window.handleDelete = async function(key) {
-  if (!confirm("本当に削除しますか？")) return;
-  await remove(ref(db, `coordinates/${key}`));
-  alert("削除しました！");
-  await loadMarkers();
-  refreshListTabs();
+window.handleDelete = async function(key, message) {
+  try {
+    if (!confirm("本当に削除しますか？")) return;
+    await remove(ref(db, `coordinates/${key}`));
+    alert(message);
+    await loadMarkers();
+    refreshListTabs();
+  } catch (error) {
+    console.error("削除エラー:", error);
+    alert("削除に失敗しました");
+  }
 };
+
 
 // ✅ リストからの状態変更（取得⇔未取得）
 window.handleStatusChange = async function (key, status, message) {
