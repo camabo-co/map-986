@@ -180,74 +180,86 @@ document.getElementById("toggleClaimed").addEventListener("click", () => {
 function openListTab(title, items, type) {
   const win = window.open("", type === "unclaimed" ? "unclaimedWin" : "claimedWin");
 
-  // 並び順を取得（localStorageに保存されていれば反映）
   const sortOrder = localStorage.getItem(`${type}_sortOrder`) || "xy";
 
-  // ソート関数
   const sortItems = (items, order) => {
     if (order === "xy") {
       return [...items].sort((a, b) => a.X - b.X || a.Y - b.Y);
     } else {
-      return [...items]; // 登録順（そのまま）
+      return [...items]; // 登録順
     }
   };
 
   const sortedItems = sortItems(items, sortOrder);
 
-  const html = `<!DOCTYPE html>
-  <html lang="ja">
-  <head>
-    <meta charset="UTF-8">
-    <title>${title}</title>
-    <style>
-      body { font-family: sans-serif; padding: 20px; background: #fafafa; }
-      h2 { color: ${type === "unclaimed" ? "#6c63ff" : "darkgreen"}; }
-      select { margin: 10px 0; padding: 4px 8px; }
-      ul { list-style: none; padding: 0; }
-      li {
-        background: white; border: 1px solid #ccc; margin-bottom: 8px;
-        padding: 10px; font-size: 14px;
-      }
-      button {
-        margin-right: 8px; padding: 5px 10px; font-size: 13px;
-        background: ${type === "unclaimed" ? "#6c63ff" : "darkorange"};
-        color: white; border: none; border-radius: 4px;
-        cursor: pointer;
-      }
-      button.delete { background: #d9534f; }
-    </style>
-  </head>
-  <body>
-    <h2>📋 ${title}</h2>
+  const html = `
+    <!DOCTYPE html>
+    <html lang="ja">
+    <head>
+      <meta charset="UTF-8">
+      <title>${title}</title>
+      <style>
+        body { font-family: sans-serif; padding: 20px; background: #fafafa; }
+        h2 { color: ${type === "unclaimed" ? "#6c63ff" : "darkgreen"}; }
+        select { margin: 10px 0; padding: 4px 8px; }
+        ul { list-style: none; padding: 0; }
+        li {
+          background: white; border: 1px solid #ccc; margin-bottom: 8px;
+          padding: 10px; font-size: 14px;
+        }
+        button {
+          margin-right: 8px; padding: 5px 10px; font-size: 13px;
+          background: ${type === "unclaimed" ? "#6c63ff" : "darkorange"};
+          color: white; border: none; border-radius: 4px;
+          cursor: pointer;
+        }
+        button.delete { background: #d9534f; }
+      </style>
+    </head>
+    <body>
+      <h2>📋 ${title}</h2>
 
-    <label>並び順：
-      <select id="sortSelect" onchange="changeSort(this.value)">
-        <option value="xy" ${sortOrder === "xy" ? "selected" : ""}>座標順（X→Y）</option>
-        <option value="recent" ${sortOrder === "recent" ? "selected" : ""}>登録順（そのまま）</option>
-      </select>
-    </label>
+      <label>並び順：
+        <select id="sortSelect" onchange="changeSort(this.value)">
+          <option value="xy" ${sortOrder === "xy" ? "selected" : ""}>座標順（X→Y）</option>
+          <option value="recent" ${sortOrder === "recent" ? "selected" : ""}>登録順（そのまま）</option>
+        </select>
+      </label>
 
-    <ul>
-      ${sortedItems.map(item => `
-        <li>
-          サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}<br>
-          ${item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""}
-          ${type === "unclaimed"
-            ? `<button onclick="window.opener.handleStatusChange('${item._id}', '取得済み', '更新しました')">取得済みに</button>`
-            : `<button onclick="window.opener.handleStatusChange('${item._id}', '未取得', '未取得に戻しました')">未取得に戻す</button>`}
-          <button class="delete" onclick="window.opener.handleDelete('${item._id}', '削除しました')">削除</button>
-        </li>
-      `).join("")}
-    </ul>
+      <ul>
+        ${sortedItems.map(item => `
+          <li>
+            サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}<br>
+            ${item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""}
+            ${type === "unclaimed"
+              ? `<button onclick="sendStatusChange('${item._id}', '取得済み')">取得済みに</button>`
+              : `<button onclick="sendStatusChange('${item._id}', '未取得')">未取得に戻す</button>`}
+            <button class="delete" onclick="sendDelete('${item._id}')">削除</button>
+          </li>
+        `).join("")}
+      </ul>
 
-    <script>
-      function changeSort(order) {
-        localStorage.setItem("${type}_sortOrder", order);
-        location.reload();
-      }
-    </script>
-  </body>
-  </html>`;
+      <script>
+        function changeSort(order) {
+          localStorage.setItem("${type}_sortOrder", order);
+          location.reload();
+        }
+
+        function sendStatusChange(id, status) {
+          if (window.opener) {
+            window.opener.postMessage({ type: 'statusChange', id, status }, "*");
+          }
+        }
+
+        function sendDelete(id) {
+          if (window.opener) {
+            window.opener.postMessage({ type: 'delete', id }, "*");
+          }
+        }
+      </script>
+    </body>
+    </html>
+  `;
 
   win.document.write(html);
   win.document.close();
