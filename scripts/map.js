@@ -1,17 +1,5 @@
-// ✅ map.js 完全版 - Firebase + Leaflet 対応済
-import {
-  initializeApp
-} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-
-import {
-  getDatabase,
-  ref,
-  push,
-  get,
-  child,
-  update,
-  remove
-} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+import { getDatabase, ref, push, get, child, update, remove } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
 // ✅ Firebase初期化
 const firebaseConfig = {
@@ -125,38 +113,36 @@ async function loadMarkers() {
     }
   }
 }
-
-// ✅ 状態変更関数（ポップアップ）
+// ✅ 状態変更（ポップアップ内）
 window.changeStatus = async function(key) {
   await update(ref(db), { [`coordinates/${key}/取得状況`]: "取得済み" });
   await loadMarkers();
   refreshListTabs();
 };
 
-// ✅ 削除関数（message は省略可にする）
+// ✅ 削除処理（ポップアップ・リスト共通）
 window.handleDelete = async function(key, message = "削除しました") {
+  if (!confirm("本当に削除しますか？")) return;
   try {
-    if (!confirm("本当に削除しますか？")) return;
     await remove(ref(db, `coordinates/${key}`));
     alert(message);
     await loadMarkers();
     refreshListTabs();
-  } catch (error) {
-    console.error("削除エラー:", error);
+  } catch (err) {
+    console.error("削除エラー:", err);
     alert("削除に失敗しました");
   }
 };
 
-
-
-// ✅ リストからの状態変更（取得⇔未取得）
-window.handleStatusChange = async function (key, status, message) {
+// ✅ 状態変更（リスト画面用）
+window.handleStatusChange = async function(key, status, message) {
   await update(ref(db), { [`coordinates/${key}/取得状況`]: status });
   alert(message);
   await loadMarkers();
   refreshListTabs();
 };
 
+// ✅ リスト画面の再描画
 function refreshListTabs() {
   if (unclaimedWin && !unclaimedWin.closed) openListTab("未取得リスト", unclaimedItems, "unclaimed");
   if (claimedWin && !claimedWin.closed) openListTab("取得済みリスト", claimedItems, "claimed");
@@ -165,17 +151,17 @@ function refreshListTabs() {
 // ✅ 初回読み込み
 loadMarkers();
 
+// ✅ ボタンでリスト画面を開く
 document.getElementById("toggleUnclaimed").addEventListener("click", () => {
   openListTab("未取得リスト", unclaimedItems, "unclaimed");
 });
-
 document.getElementById("toggleClaimed").addEventListener("click", () => {
   openListTab("取得済みリスト", claimedItems, "claimed");
 });
 
-// ✅ リスト画面表示
+// ✅ リスト画面生成
 function openListTab(title, items, type) {
-  const win = window.open("about:blank", type === "unclaimed" ? "unclaimedWin" : "claimedWin");
+  const win = window.open("", type === "unclaimed" ? "unclaimedWin" : "claimedWin");
   const sortedItems = [...items].sort((a, b) => {
     return a.レベル - b.レベル || a.サーバー名 - b.サーバー名 || a.X - b.X || a.Y - b.Y;
   });
@@ -189,16 +175,8 @@ function openListTab(title, items, type) {
       body { font-family: sans-serif; padding: 20px; background: #fafafa; }
       h2 { color: ${type === "unclaimed" ? "#6c63ff" : "darkgreen"}; }
       ul { list-style: none; padding: 0; }
-      li {
-        background: white; border: 1px solid #ccc; margin-bottom: 8px;
-        padding: 10px; font-size: 14px;
-      }
-      button {
-        margin-right: 8px; padding: 5px 10px; font-size: 13px;
-        background: ${type === "unclaimed" ? "#6c63ff" : "darkorange"};
-        color: white; border: none; border-radius: 4px;
-        cursor: pointer;
-      }
+      li { background: white; border: 1px solid #ccc; margin-bottom: 8px; padding: 10px; font-size: 14px; }
+      button { margin-right: 8px; padding: 5px 10px; font-size: 13px; background: ${type === "unclaimed" ? "#6c63ff" : "darkorange"}; color: white; border: none; border-radius: 4px; cursor: pointer; }
       button.delete { background: #d9534f; }
     </style>
   </head>
@@ -209,50 +187,18 @@ function openListTab(title, items, type) {
         <li>
           サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}<br>
           ${type === "unclaimed" && item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""}
-          <button onclick="handleStatusChange('${item._id}', '${type === "unclaimed" ? "取得済み" : "未取得"}')">
-            ${type === "unclaimed" ? "取得済みに" : "未取得に戻す"}
-          </button>
-          <button class="delete" onclick="deleteItem('${item._id}')">削除</button>
+          ${type === "unclaimed"
+            ? `<button onclick="window.opener.handleStatusChange('${item._id}', '取得済み', '更新しました')">取得済みに</button>`
+            : `<button onclick="window.opener.handleStatusChange('${item._id}', '未取得', '未取得に戻しました')">未取得に戻す</button>`}
+          <button class="delete" onclick="window.opener.handleDelete('${item._id}', '削除しました')">削除</button>
         </li>
       `).join("")}
     </ul>
-
-    <script type="module">
-      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-      import { getDatabase, ref, update, remove } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
-
-      const firebaseConfig = {
-        apiKey: "AIzaSyDdNI04D1xhQihN3DBDdF1_YAp6XRcErDw",
-        authDomain: "maps3-986-ffbbd.firebaseapp.com",
-        databaseURL: "https://maps3-986-ffbbd-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "maps3-986-ffbbd",
-        storageBucket: "maps3-986-ffbbd.appspot.com",
-        messagingSenderId: "701191378459",
-        appId: "1:701191378459:web:d2cf8d869f5cba869d0abe"
-      };
-
-      const app = initializeApp(firebaseConfig);
-      const db = getDatabase(app);
-
-      async function deleteItem(id) {
-        if (!confirm("本当に削除しますか？")) return;
-        await remove(ref(db, "coordinates/" + id));
-        alert("削除しました");
-        location.reload();
-      }
-
-      async function handleStatusChange(id, status) {
-        await update(ref(db), { ["coordinates/" + id + "/取得状況"]: status });
-        alert("状態を更新しました");
-        location.reload();
-      }
-    </script>
   </body>
   </html>`;
 
   win.document.write(html);
   win.document.close();
-
   if (type === "unclaimed") unclaimedWin = win;
   else claimedWin = win;
 }
