@@ -202,3 +202,11 @@ function openListTab(title, items, type) {
 
 // ✅ 初期読み込み
 loadMarkers();
+  }
+
+  // ✅ リスト連携用に保存（忘れずに！）
+  localStorage.setItem("claimedItems", JSON.stringify(claimedItems));
+  localStorage.setItem("unclaimedItems", JSON.stringify(unclaimedItems));
+}
+
+
