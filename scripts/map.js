@@ -1,6 +1,8 @@
 // ✅ Firebase SDK 読み込み
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-import { getDatabase, ref, push, get, child, update, remove } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+import {
+  getDatabase, ref, push, get, child, update, remove
+} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
 // ✅ Firebase 初期化
 const firebaseConfig = {
@@ -15,14 +17,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// ✅ 地図初期化
+// ✅ 地図初期化（1000×1000 グリッド）
 const map = L.map("map", {
   crs: L.CRS.Simple,
   minZoom: -3,
   maxZoom: 2
 }).setView([500, 500], -2);
 
-// グリッド描画
 for (let i = 0; i <= 1000; i++) {
   L.polyline([[i, 0], [i, 1000]], { color: "#ddd", weight: 0.3 }).addTo(map);
   L.polyline([[0, i], [1000, i]], { color: "#ddd", weight: 0.3 }).addTo(map);
@@ -34,11 +35,11 @@ const levelColors = {
 };
 
 let unclaimedItems = [], claimedItems = [];
-let claimedWin = null, unclaimedWin = null;
 
-document.getElementById("coordinateForm").addEventListener("submit", async (e) => {
+// ✅ 登録処理
+const form = document.getElementById("coordinateForm");
+form.addEventListener("submit", async (e) => {
   e.preventDefault();
-  const form = e.target;
   const formData = new FormData(form);
   const serverName = formData.get("サーバー名");
   const x = parseInt(formData.get("X"));
@@ -46,7 +47,7 @@ document.getElementById("coordinateForm").addEventListener("submit", async (e) =
   const level = formData.get("レベル");
   const mark = formData.get("目印");
 
-  if (!/^\d{3,4}$/.test(serverName) || isNaN(x) || x < 0 || x > 999 || isNaN(y) || y < 0 || y > 999) {
+  if (!/^[0-9]{3,4}$/.test(serverName) || isNaN(x) || x < 0 || x > 999 || isNaN(y) || y < 0 || y > 999) {
     alert("入力内容を確認してください");
     return;
   }
@@ -75,6 +76,7 @@ document.getElementById("coordinateForm").addEventListener("submit", async (e) =
   await loadMarkers();
 });
 
+// ✅ マーカー読み込み
 async function loadMarkers() {
   unclaimedItems = [];
   claimedItems = [];
@@ -90,22 +92,20 @@ async function loadMarkers() {
     const item = items[key];
     item._id = key;
 
+    const coords = [parseInt(item.Y), parseInt(item.X)];
+    const color = levelColors[item.レベル] || "black";
+
     if (item.取得状況 === "未取得") {
       unclaimedItems.push(item);
-
-      const marker = L.circleMarker([parseInt(item.Y), parseInt(item.X)], {
-        radius: 1,
-        color: levelColors[item.レベル] || "black",
-        fillOpacity: 1
+      const marker = L.circleMarker(coords, {
+        radius: 1, color, fillOpacity: 1
       }).addTo(map);
-
       marker.bindPopup(`
         <b>サーバー名:</b> ${item.サーバー名}<br>
         <b>Lv:</b> ${item.レベル}<br>
-        <b>状態:</b> ${item.取得状況}<br>
         ${item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""}
-        <button onclick="changeStatus('${item._id}')">取得済みに</button><br>
-        <button onclick="handleDelete('${item._id}')">削除</button>
+        <button onclick=\"changeStatus('${key}')\">取得済みに</button><br>
+        <button onclick=\"handleDelete('${key}')\">削除</button>
       `);
     } else {
       claimedItems.push(item);
@@ -113,103 +113,12 @@ async function loadMarkers() {
   }
 }
 
+// ✅ 状態変更
 window.changeStatus = async function (key) {
   await update(ref(db), { [`coordinates/${key}/取得状況`]: "取得済み" });
   await loadMarkers();
-  refreshListTabs();
 };
 
-window.handleDelete = async function (key, message = "削除しました") {
-  await remove(ref(db, `coordinates/${key}`));
-  alert(message);
-  await loadMarkers();
-  refreshListTabs();
-};
-
-window.handleStatusChange = async function (key, status, message) {
-  await update(ref(db), { [`coordinates/${key}/取得状況`]: status });
-  alert(message);
-  await loadMarkers();
-  refreshListTabs();
-};
-
-window.addEventListener("message", async (event) => {
-  const data = event.data;
-  if (!data || typeof data !== "object") return;
-
-  if (data.type === "statusChange") {
-    await handleStatusChange(data.id, data.status, `状態を「${data.status}」に変更しました`);
-  }
-  if (data.type === "delete") {
-    await handleDelete(data.id, "削除しました");
-  }
-});
-
-document.getElementById("toggleUnclaimed").addEventListener("click", () => {
-  openListTab("未取得リスト", unclaimedItems, "unclaimed");
-});
-document.getElementById("toggleClaimed").addEventListener("click", () => {
-  openListTab("取得済みリスト", claimedItems, "claimed");
-});
-
-function refreshListTabs() {
-  if (unclaimedWin && !unclaimedWin.closed) openListTab("未取得リスト", unclaimedItems, "unclaimed");
-  if (claimedWin && !claimedWin.closed) openListTab("取得済みリスト", claimedItems, "claimed");
-}
-
-function openListTab(title, items, type) {
-  const win = window.open("", type === "unclaimed" ? "unclaimedWin" : "claimedWin");
-
-  const sorted = [...items].sort((a, b) => a.X - b.X || a.Y - b.Y);
-
-  const html = `<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>${title}</title>
-  <style>
-    body { font-family: sans-serif; background: #f5f5f5; padding: 20px; }
-    h2 { color: ${type === "unclaimed" ? "#3366cc" : "#009900"}; }
-    ul { list-style: none; padding: 0; }
-    li { background: white; margin-bottom: 8px; padding: 8px; border: 1px solid #ccc; }
-    button { margin-right: 6px; font-size: 13px; padding: 4px 8px; }
-    .delete { background: #d9534f; color: white; }
-  </style>
-</head><body>
-  <h2>${title}</h2>
-  <input type="text" id="searchInput" oninput="filterList()" placeholder="検索: 986, Lv3, 山など" />
-  <ul id="dataList">
-    ${sorted.map(item => `
-      <li data-search="${[item.サーバー名, item.X, item.Y, item.レベル, item.目印].join(' ').toLowerCase()}">
-        サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}<br>
-        ${item.目印 ? `🖍️目印: ${item.目印}<br>` : ""}
-        <button onclick="sendAction('statusChange', '${item._id}', '${type === "unclaimed" ? "取得済み" : "未取得"}')">
-          ${type === "unclaimed" ? "取得済みに" : "未取得に戻す"}
-        </button>
-        <button class="delete" onclick="sendAction('delete', '${item._id}')">削除</button>
-      </li>`).join("")}
-  </ul>
-  <script>
-    function sendAction(type, id, status = "") {
-      if (!window.opener) {
-        alert("親ウィンドウと通信できません");
-        return;
-      }
-      window.opener.postMessage({ type, id, status }, "*");
-    }
-    function filterList() {
-      const keyword = document.getElementById("searchInput").value.toLowerCase();
-      const items = document.querySelectorAll("#dataList li");
-      items.forEach(li => {
-        const search = li.dataset.search;
-        li.style.display = search.includes(keyword) ? "block" : "none";
-      });
-    }
-  </script>
-</body></html>`;
-
-  win.document.write(html);
-  win.document.close();
-
-  if (type === "unclaimed") unclaimedWin = win;
-  else claimedWin = win;
-}
-
-// ✅ 初期読み込み
-loadMarkers();
+// ✅ 削除処理
+window.handleDelete = async function (key) {
+  if (!confirm("本当に削除しますか？
