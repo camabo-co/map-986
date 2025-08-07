@@ -79,6 +79,37 @@
 
 <!-- 修正済み map.js を読み込み -->
 <script type="module" src="scripts/map.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+  import { getDatabase, ref, update, remove } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDdNI04D1xhQihN3DBDdF1_YAp6XRcErDw",
+    authDomain: "maps3-986-ffbbd.firebaseapp.com",
+    databaseURL: "https://maps3-986-ffbbd-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "maps3-986-ffbbd",
+    storageBucket: "maps3-986-ffbbd.appspot.com",
+    messagingSenderId: "701191378459",
+    appId: "1:701191378459:web:d2cf8d869f5cba869d0abe"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  async function deleteItem(id) {
+    if (!confirm("本当に削除しますか？")) return;
+    await remove(ref(db, "coordinates/" + id));
+    alert("削除しました");
+    location.reload();
+  }
+
+  async function handleStatusChange(id, status) {
+    await update(ref(db), { ["coordinates/" + id + "/取得状況"]: status });
+    alert("状態を更新しました");
+    location.reload();
+  }
+</script>
 
 </body>
 </html>
+
