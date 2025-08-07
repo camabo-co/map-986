@@ -127,12 +127,7 @@ window.changeStatus = async function (key) {
 // ✅ 削除処理（親ウィンドウでのみ confirm を出す）
 window.handleDelete = async function (key, message = "削除しました") {
   try {
-    // 親ウィンドウでのみ confirm（子ウィンドウは無効化）
-    if (document.hidden) {
-      alert("削除するには、地図画面をアクティブにしてから操作してください。");
-      return;
-    }
-
+    // アクティブチェックを無効化（常に削除可能）
     if (!confirm("本当に削除しますか？")) return;
     await remove(ref(db, `coordinates/${key}`));
     alert(message);
@@ -164,98 +159,6 @@ window.addEventListener("message", async (event) => {
     await handleDelete(data.id, "削除しました");
   }
 });
-
-// ✅ リストボタン
-document.getElementById("toggleUnclaimed").addEventListener("click", () => {
-  openListTab("未取得リスト", unclaimedItems, "unclaimed");
-});
-document.getElementById("toggleClaimed").addEventListener("click", () => {
-  openListTab("取得済みリスト", claimedItems, "claimed");
-});
-
-// ✅ リスト画面更新
-function refreshListTabs() {
-  if (unclaimedWin && !unclaimedWin.closed) openListTab("未取得リスト", unclaimedItems, "unclaimed");
-  if (claimedWin && !claimedWin.closed) openListTab("取得済みリスト", claimedItems, "claimed");
-}
-
-// ✅ リストタブを新規 or 更新
-function openListTab(title, items, type) {
-  const win = window.open("", type === "unclaimed" ? "unclaimedWin" : "claimedWin");
-
-  const sortOrder = localStorage.getItem(`${type}_sortOrder`) || "xy";
-  const sorted = [...items].sort((a, b) =>
-    sortOrder === "xy" ? a.X - b.X || a.Y - b.Y : 0
-  );
-
-  const html = `
-    <!DOCTYPE html>
-    <html lang="ja">
-    <head>
-      <meta charset="UTF-8"><title>${title}</title>
-      <style>
-        body { font-family: sans-serif; background: #f5f5f5; padding: 20px; }
-        h2 { color: ${type === "unclaimed" ? "#3366cc" : "#009900"}; }
-        ul { list-style: none; padding: 0; }
-        li { background: white; margin-bottom: 8px; padding: 8px; border: 1px solid #ccc; }
-        button { margin-right: 6px; font-size: 13px; padding: 4px 8px; }
-        .delete { background: #d9534f; color: white; }
-      </style>
-    </head>
-    <body>
-      <h2>${title}</h2>
-      <label>並び順:
-        <select onchange="changeSort(this.value)">
-          <option value="xy" ${sortOrder === "xy" ? "selected" : ""}>座標順</option>
-          <option value="recent" ${sortOrder === "recent" ? "selected" : ""}>登録順</option>
-        </select>
-      </label>
-      <input type="text" id="searchInput" oninput="filterList()" placeholder="検索: 986, Lv3, 山など" style="margin-left:10px;" />
-      <ul id="dataList">
-        ${sorted.map(item => `
-          <li data-search="${[item.サーバー名, item.X, item.Y, item.レベル, item.目印].join(' ').toLowerCase()}">
-            サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}<br>
-            ${item.目印 ? `🖍️目印: ${item.目印}<br>` : ""}
-            <button onclick="sendAction('statusChange', '${item._id}', '${type === "unclaimed" ? "取得済み" : "未取得"}')">
-              ${type === "unclaimed" ? "取得済みに" : "未取得に戻す"}
-            </button>
-            <button class="delete" onclick="sendAction('delete', '${item._id}')">削除</button>
-          </li>
-        `).join("")}
-      </ul>
-      <script>
-        function sendAction(type, id, status = "") {
-          if (!window.opener) {
-            alert("親ウィンドウと通信できません");
-            return;
-          }
-          window.opener.postMessage({ type, id, status }, "*");
-        }
-
-        function changeSort(order) {
-          localStorage.setItem("${type}_sortOrder", order);
-          location.reload();
-        }
-
-        function filterList() {
-          const keyword = document.getElementById("searchInput").value.toLowerCase();
-          const items = document.querySelectorAll("#dataList li");
-          items.forEach(li => {
-            const search = li.dataset.search;
-            li.style.display = search.includes(keyword) ? "block" : "none";
-          });
-        }
-      </script>
-    </body>
-    </html>
-  `;
-
-  win.document.write(html);
-  win.document.close();
-
-  if (type === "unclaimed") unclaimedWin = win;
-  else claimedWin = win;
-}
 
 // ✅ 初期読み込み
 loadMarkers();
