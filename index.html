@@ -49,16 +49,6 @@
     document.body.innerHTML = "<h2>アクセスが拒否されました</h2>";
     throw new Error("Unauthorized access");
   }
-
-  // ✅ ボタンでリスト表示（新しいタブで開く）
-  document.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("toggleUnclaimed").addEventListener("click", () => {
-      window.open("list_unclaimed.html", "_blank");
-    });
-    document.getElementById("toggleClaimed").addEventListener("click", () => {
-      openListTab("取得済みリスト", claimedItems, "claimed");
-    });
-  });
 </script>
 
 <h2>座標マップアプリ</h2>
@@ -87,9 +77,7 @@
 
 <div id="map"></div>
 
-<!-- ✅ map.js のパスは scripts/map.js -->
-<script type="module" src="scripts/map.js"></script>
+<script type="module" src="map.js"></script>
 
 </body>
 </html>
-
