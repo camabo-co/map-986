@@ -63,7 +63,7 @@ form.addEventListener("submit", async (e) => {
   for (const key in items) {
     const item = items[key];
     if (parseInt(item.X) === x && parseInt(item.Y) === y) {
-      alert(この座標 X:${x}, Y:${y} はすでに登録されています);
+      alert(`この座標 X:${x}, Y:${y} はすでに登録されています`);
       return;
     }
   }
@@ -102,14 +102,14 @@ async function loadMarkers() {
         fillOpacity: 1
       }).addTo(map);
 
-      marker.bindPopup(
+      marker.bindPopup(`
         <b>サーバー名:</b> ${item.サーバー名}<br>
         <b>Lv:</b> ${item.レベル}<br>
         <b>状態:</b> ${item.取得状況}<br>
-        ${item.目印 ? <b>🖍️目印:</b> ${item.目印}<br> : ""}
+        ${item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""}
         <button onclick="changeStatus('${item._id}')">取得済みに</button><br>
         <button onclick="handleDelete('${item._id}')">削除</button>
-      );
+      `);
     } else {
       claimedItems.push(item);
     }
@@ -118,7 +118,7 @@ async function loadMarkers() {
 
 // ✅ 状態変更（ポップアップから）
 window.changeStatus = async function (key) {
-  await update(ref(db), { [coordinates/${key}/取得状況]: "取得済み" });
+  await update(ref(db), { [`coordinates/${key}/取得状況`]: "取得済み" });
   await loadMarkers();
   refreshListTabs();
 };
@@ -127,7 +127,7 @@ window.changeStatus = async function (key) {
 window.handleDelete = async function (key, message = "削除しました") {
   try {
     if (!confirm("本当に削除しますか？")) return;
-    await remove(ref(db, coordinates/${key}));
+    await remove(ref(db, `coordinates/${key}`));
     alert(message);
     await loadMarkers();
     refreshListTabs();
@@ -139,7 +139,7 @@ window.handleDelete = async function (key, message = "削除しました") {
 
 // ✅ 状態変更（リスト画面から）
 window.handleStatusChange = async function (key, status, message) {
-  await update(ref(db), { [coordinates/${key}/取得状況]: status });
+  await update(ref(db), { [`coordinates/${key}/取得状況`]: status });
   alert(message);
   await loadMarkers();
   refreshListTabs();
@@ -151,7 +151,7 @@ window.addEventListener("message", async (event) => {
   if (!data || typeof data !== "object") return;
 
   if (data.type === "statusChange") {
-    await handleStatusChange(data.id, data.status, 状態を「${data.status}」に更新しました);
+    await handleStatusChange(data.id, data.status, `状態を「${data.status}」に更新しました`);
   }
 
   if (data.type === "delete") {
@@ -183,7 +183,7 @@ function openListTab(title, items, type) {
     return a.レベル - b.レベル || a.サーバー名 - b.サーバー名 || a.X - b.X || a.Y - b.Y;
   });
 
-  const html = <!DOCTYPE html>
+  const html = `<!DOCTYPE html>
   <html lang="ja">
   <head>
     <meta charset="UTF-8">
@@ -208,16 +208,16 @@ function openListTab(title, items, type) {
   <body>
     <h2>📋 ${title}</h2>
     <ul>
-      ${sortedItems.map(item => 
+      ${sortedItems.map(item => `
         <li>
           サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}<br>
-          ${item.目印 ? <b>🖍️目印:</b> ${item.目印}<br> : ""}
+          ${item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""}
           ${type === "unclaimed"
-            ? <button onclick="sendStatusChange('${item._id}', '取得済み')">取得済みに</button>
-            : <button onclick="sendStatusChange('${item._id}', '未取得')">未取得に戻す</button>}
+            ? `<button onclick="sendStatusChange('${item._id}', '取得済み')">取得済みに</button>`
+            : `<button onclick="sendStatusChange('${item._id}', '未取得')">未取得に戻す</button>`}
           <button class="delete" onclick="sendDelete('${item._id}')">削除</button>
         </li>
-      ).join("")}
+      `).join("")}
     </ul>
     <script>
       function sendStatusChange(id, status) {
@@ -228,12 +228,10 @@ function openListTab(title, items, type) {
       }
     </script>
   </body>
-  </html>;
+  </html>`;
   win.document.write(html);
   win.document.close();
 
   if (type === "unclaimed") unclaimedWin = win;
   else claimedWin = win;
 }
-
-
