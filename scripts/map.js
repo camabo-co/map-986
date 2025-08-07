@@ -124,20 +124,6 @@ window.changeStatus = async function (key) {
   refreshListTabs();
 };
 
-// ✅ 削除処理（親ウィンドウでのみ confirm を出す）
-window.handleDelete = async function (key, message = "削除しました") {
-  try {
-    // アクティブチェックを無効化（常に削除可能）
-    if (!confirm("本当に削除しますか？")) return;
-    await remove(ref(db, `coordinates/${key}`));
-    alert(message);
-    await loadMarkers();
-    refreshListTabs();
-  } catch (err) {
-    console.error("削除エラー:", err);
-    alert("削除に失敗しました");
-  }
-};
 
 // ✅ 状態変更（postMessage 経由）
 window.handleStatusChange = async function (key, status, message) {
@@ -162,3 +148,4 @@ window.addEventListener("message", async (event) => {
 
 // ✅ 初期読み込み
 loadMarkers();
+
