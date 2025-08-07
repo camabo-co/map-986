@@ -15,7 +15,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// ✅ 地図初期化（1000×1000 グリッド）
+// ✅ 地図初期化
 const map = L.map("map", {
   crs: L.CRS.Simple,
   minZoom: -3,
@@ -28,17 +28,14 @@ for (let i = 0; i <= 1000; i++) {
   L.polyline([[0, i], [1000, i]], { color: "#ddd", weight: 0.3 }).addTo(map);
 }
 
-// ✅ マーカー色レベル別
 const levelColors = {
   "1": "blue", "2": "lightblue", "3": "green",
   "4": "lime", "5": "orange", "6": "red", "7": "purple"
 };
 
-// ✅ 状態管理
 let unclaimedItems = [], claimedItems = [];
 let claimedWin = null, unclaimedWin = null;
 
-// ✅ 登録処理
 document.getElementById("coordinateForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const form = e.target;
@@ -78,7 +75,6 @@ document.getElementById("coordinateForm").addEventListener("submit", async (e) =
   await loadMarkers();
 });
 
-// ✅ マーカー表示
 async function loadMarkers() {
   unclaimedItems = [];
   claimedItems = [];
@@ -117,28 +113,19 @@ async function loadMarkers() {
   }
 }
 
-// ✅ 状態変更
 window.changeStatus = async function (key) {
   await update(ref(db), { [`coordinates/${key}/取得状況`]: "取得済み" });
   await loadMarkers();
   refreshListTabs();
 };
 
-// ✅ 削除処理
 window.handleDelete = async function (key, message = "削除しました") {
-  try {
-    if (!confirm("本当に削除しますか？")) return;
-    await remove(ref(db, `coordinates/${key}`));
-    alert(message);
-    await loadMarkers();
-    refreshListTabs();
-  } catch (err) {
-    console.error("削除エラー:", err);
-    alert("削除に失敗しました");
-  }
+  await remove(ref(db, `coordinates/${key}`));
+  alert(message);
+  await loadMarkers();
+  refreshListTabs();
 };
 
-// ✅ 状態変更 (postMessage)
 window.handleStatusChange = async function (key, status, message) {
   await update(ref(db), { [`coordinates/${key}/取得状況`]: status });
   alert(message);
@@ -146,7 +133,6 @@ window.handleStatusChange = async function (key, status, message) {
   refreshListTabs();
 };
 
-// ✅ メッセージ受信
 window.addEventListener("message", async (event) => {
   const data = event.data;
   if (!data || typeof data !== "object") return;
@@ -158,6 +144,72 @@ window.addEventListener("message", async (event) => {
     await handleDelete(data.id, "削除しました");
   }
 });
+
+document.getElementById("toggleUnclaimed").addEventListener("click", () => {
+  openListTab("未取得リスト", unclaimedItems, "unclaimed");
+});
+document.getElementById("toggleClaimed").addEventListener("click", () => {
+  openListTab("取得済みリスト", claimedItems, "claimed");
+});
+
+function refreshListTabs() {
+  if (unclaimedWin && !unclaimedWin.closed) openListTab("未取得リスト", unclaimedItems, "unclaimed");
+  if (claimedWin && !claimedWin.closed) openListTab("取得済みリスト", claimedItems, "claimed");
+}
+
+function openListTab(title, items, type) {
+  const win = window.open("", type === "unclaimed" ? "unclaimedWin" : "claimedWin");
+
+  const sorted = [...items].sort((a, b) => a.X - b.X || a.Y - b.Y);
+
+  const html = `<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>${title}</title>
+  <style>
+    body { font-family: sans-serif; background: #f5f5f5; padding: 20px; }
+    h2 { color: ${type === "unclaimed" ? "#3366cc" : "#009900"}; }
+    ul { list-style: none; padding: 0; }
+    li { background: white; margin-bottom: 8px; padding: 8px; border: 1px solid #ccc; }
+    button { margin-right: 6px; font-size: 13px; padding: 4px 8px; }
+    .delete { background: #d9534f; color: white; }
+  </style>
+</head><body>
+  <h2>${title}</h2>
+  <input type="text" id="searchInput" oninput="filterList()" placeholder="検索: 986, Lv3, 山など" />
+  <ul id="dataList">
+    ${sorted.map(item => `
+      <li data-search="${[item.サーバー名, item.X, item.Y, item.レベル, item.目印].join(' ').toLowerCase()}">
+        サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}<br>
+        ${item.目印 ? `🖍️目印: ${item.目印}<br>` : ""}
+        <button onclick="sendAction('statusChange', '${item._id}', '${type === "unclaimed" ? "取得済み" : "未取得"}')">
+          ${type === "unclaimed" ? "取得済みに" : "未取得に戻す"}
+        </button>
+        <button class="delete" onclick="sendAction('delete', '${item._id}')">削除</button>
+      </li>`).join("")}
+  </ul>
+  <script>
+    function sendAction(type, id, status = "") {
+      if (!window.opener) {
+        alert("親ウィンドウと通信できません");
+        return;
+      }
+      window.opener.postMessage({ type, id, status }, "*");
+    }
+    function filterList() {
+      const keyword = document.getElementById("searchInput").value.toLowerCase();
+      const items = document.querySelectorAll("#dataList li");
+      items.forEach(li => {
+        const search = li.dataset.search;
+        li.style.display = search.includes(keyword) ? "block" : "none";
+      });
+    }
+  </script>
+</body></html>`;
+
+  win.document.write(html);
+  win.document.close();
+
+  if (type === "unclaimed") unclaimedWin = win;
+  else claimedWin = win;
+}
 
 // ✅ 初期読み込み
 loadMarkers();
