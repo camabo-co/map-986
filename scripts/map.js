@@ -15,33 +15,37 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// ✅ 地図初期化（1000×1000 グリッド）
+// ✅ 地図初期化（1000×1000グリッド）
 const map = L.map("map", {
   crs: L.CRS.Simple,
   minZoom: -3,
   maxZoom: 2
 }).setView([500, 500], -2);
 
-// グリッド描画
 for (let i = 0; i <= 1000; i++) {
   L.polyline([[i, 0], [i, 1000]], { color: "#ddd", weight: 0.3 }).addTo(map);
   L.polyline([[0, i], [1000, i]], { color: "#ddd", weight: 0.3 }).addTo(map);
 }
 
-// ✅ マーカー色（レベル別）
+// ✅ レベル別マーカー色
 const levelColors = {
-  "1": "blue", "2": "lightblue", "3": "green",
-  "4": "lime", "5": "orange", "6": "red", "7": "purple"
+  "1": "blue",
+  "2": "lightblue",
+  "3": "green",
+  "4": "lime",
+  "5": "orange",
+  "6": "red",
+  "7": "purple"
 };
 
-// ✅ 状態管理
+// ✅ 状態管理変数
 let unclaimedItems = [], claimedItems = [];
 let claimedWin = null, unclaimedWin = null;
 
-// ✅ 登録処理
-document.getElementById("coordinateForm").addEventListener("submit", async (e) => {
+// ✅ 登録フォーム送信
+const form = document.getElementById("coordinateForm");
+form.addEventListener("submit", async (e) => {
   e.preventDefault();
-  const form = e.target;
   const formData = new FormData(form);
   const serverName = formData.get("サーバー名");
   const x = parseInt(formData.get("X"));
@@ -59,7 +63,7 @@ document.getElementById("coordinateForm").addEventListener("submit", async (e) =
   for (const key in items) {
     const item = items[key];
     if (parseInt(item.X) === x && parseInt(item.Y) === y) {
-      alert(`この座標 X:${x}, Y:${y} はすでに登録されています`);
+      alert(この座標 X:${x}, Y:${y} はすでに登録されています);
       return;
     }
   }
@@ -72,153 +76,164 @@ document.getElementById("coordinateForm").addEventListener("submit", async (e) =
     取得状況: "未取得",
     目印: mark || ""
   });
-
   alert("登録しました！");
   form.reset();
   await loadMarkers();
 });
 
-// ✅ マーカー表示
+// ✅ マーカー読み込みと分類
 async function loadMarkers() {
-  unclaimedItems = [];
-  claimedItems = [];
-
+  unclaimedItems = [], claimedItems = [];
   map.eachLayer(layer => {
     if (layer instanceof L.CircleMarker) map.removeLayer(layer);
   });
 
   const snapshot = await get(child(ref(db), "coordinates"));
   const items = snapshot.exists() ? snapshot.val() : {};
-
   for (const key in items) {
     const item = items[key];
     item._id = key;
 
     if (item.取得状況 === "未取得") {
       unclaimedItems.push(item);
-
       const marker = L.circleMarker([parseInt(item.Y), parseInt(item.X)], {
         radius: 1,
         color: levelColors[item.レベル] || "black",
         fillOpacity: 1
       }).addTo(map);
 
-      marker.bindPopup(`
+      marker.bindPopup(
         <b>サーバー名:</b> ${item.サーバー名}<br>
         <b>Lv:</b> ${item.レベル}<br>
         <b>状態:</b> ${item.取得状況}<br>
-        ${item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""}
+        ${item.目印 ? <b>🖍️目印:</b> ${item.目印}<br> : ""}
         <button onclick="changeStatus('${item._id}')">取得済みに</button><br>
         <button onclick="handleDelete('${item._id}')">削除</button>
-      `);
+      );
     } else {
       claimedItems.push(item);
     }
   }
 }
 
-// ✅ 状態変更（地図ポップアップ）
+// ✅ 状態変更（ポップアップから）
 window.changeStatus = async function (key) {
-  await update(ref(db), { [`coordinates/${key}/取得状況`]: "取得済み" });
+  await update(ref(db), { [coordinates/${key}/取得状況]: "取得済み" });
   await loadMarkers();
   refreshListTabs();
 };
 
-// ✅ 削除処理
+// ✅ 削除（全画面共通）
 window.handleDelete = async function (key, message = "削除しました") {
   try {
     if (!confirm("本当に削除しますか？")) return;
-    await remove(ref(db, `coordinates/${key}`));
+    await remove(ref(db, coordinates/${key}));
     alert(message);
     await loadMarkers();
     refreshListTabs();
-  } catch (err) {
-    console.error("削除エラー:", err);
+  } catch (error) {
+    console.error("削除エラー:", error);
     alert("削除に失敗しました");
   }
 };
 
-// ✅ 状態変更（postMessage 経由）
+// ✅ 状態変更（リスト画面から）
 window.handleStatusChange = async function (key, status, message) {
-  await update(ref(db), { [`coordinates/${key}/取得状況`]: status });
+  await update(ref(db), { [coordinates/${key}/取得状況]: status });
   alert(message);
   await loadMarkers();
   refreshListTabs();
 };
 
-// ✅ メッセージ受信
+// ✅ メッセージ受信（リストからの postMessage に対応）
 window.addEventListener("message", async (event) => {
   const data = event.data;
   if (!data || typeof data !== "object") return;
 
   if (data.type === "statusChange") {
-    await handleStatusChange(data.id, data.status, `状態を「${data.status}」に変更しました`);
+    await handleStatusChange(data.id, data.status, 状態を「${data.status}」に更新しました);
   }
+
   if (data.type === "delete") {
     await handleDelete(data.id, "削除しました");
   }
 });
 
-// ✅ リストボタン
-function openListTab(title, items, type) {
-  const win = window.open("", type);
+// ✅ リスト再描画
+function refreshListTabs() {
+  if (unclaimedWin && !unclaimedWin.closed) openListTab("未取得リスト", unclaimedItems, "unclaimed");
+  if (claimedWin && !claimedWin.closed) openListTab("取得済みリスト", claimedItems, "claimed");
+}
 
-  const sortOrder = localStorage.getItem(`${type}_sortOrder`) || "xy";
-  const sorted = [...items].sort((a, b) => {
-    if (sortOrder === "xy") {
-      return a.X - b.X || a.Y - b.Y;
-    } else if (sortOrder === "level") {
-      return a.レベル - b.レベル || a.X - b.X;
-    } else {
-      return 0; // 登録順
-    }
+// ✅ 初期ロード
+loadMarkers();
+
+// ✅ リストボタンイベント
+document.getElementById("toggleUnclaimed").addEventListener("click", () => {
+  openListTab("未取得リスト", unclaimedItems, "unclaimed");
+});
+document.getElementById("toggleClaimed").addEventListener("click", () => {
+  openListTab("取得済みリスト", claimedItems, "claimed");
+});
+
+// ✅ リストウィンドウ生成
+function openListTab(title, items, type) {
+  const win = window.open("", type === "unclaimed" ? "unclaimedWin" : "claimedWin");
+  const sortedItems = [...items].sort((a, b) => {
+    return a.レベル - b.レベル || a.サーバー名 - b.サーバー名 || a.X - b.X || a.Y - b.Y;
   });
 
-  const listItems = sorted.map(i => {
-    const mark = i.目印 ? `🖍️${i.目印}` : "";
-    return `
-      <li>
-        ${i.サーバー名} (${i.X}, ${i.Y}) Lv${i.レベル} ${mark}<br>
-        <button onclick="window.opener.handleStatusChange('${i._id}', '${type === 'claimed' ? '未取得' : '取得済み'}', '${type === 'claimed' ? '未取得に戻しました' : '取得済みにしました'}')">
-          ${type === 'claimed' ? '未取得に戻す' : '取得済みにする'}
-        </button>
-        <button onclick="window.opener.handleDelete('${i._id}', '削除しました')">削除</button>
-      </li>`;
-  }).join("");
-
-  const html = `
-    <html><head><meta charset="utf-8"><title>${title}</title></head><body>
-    <h2>${title}</h2>
-    <label>並び順：
-      <select onchange="changeSort(this.value)">
-        <option value="xy" ${sortOrder === "xy" ? "selected" : ""}>X→Y順</option>
-        <option value="level" ${sortOrder === "level" ? "selected" : ""}>レベル順</option>
-        <option value="recent" ${sortOrder === "recent" ? "selected" : ""}>登録順</option>
-      </select>
-    </label>
-    <ul>${listItems}</ul>
+  const html = <!DOCTYPE html>
+  <html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <title>${title}</title>
+    <style>
+      body { font-family: sans-serif; padding: 20px; background: #fafafa; }
+      h2 { color: ${type === "unclaimed" ? "#6c63ff" : "darkgreen"}; }
+      ul { list-style: none; padding: 0; }
+      li {
+        background: white; border: 1px solid #ccc; margin-bottom: 8px;
+        padding: 10px; font-size: 14px;
+      }
+      button {
+        margin-right: 8px; padding: 5px 10px; font-size: 13px;
+        background: ${type === "unclaimed" ? "#6c63ff" : "darkorange"};
+        color: white; border: none; border-radius: 4px;
+        cursor: pointer;
+      }
+      button.delete { background: #d9534f; }
+    </style>
+  </head>
+  <body>
+    <h2>📋 ${title}</h2>
+    <ul>
+      ${sortedItems.map(item => 
+        <li>
+          サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}<br>
+          ${item.目印 ? <b>🖍️目印:</b> ${item.目印}<br> : ""}
+          ${type === "unclaimed"
+            ? <button onclick="sendStatusChange('${item._id}', '取得済み')">取得済みに</button>
+            : <button onclick="sendStatusChange('${item._id}', '未取得')">未取得に戻す</button>}
+          <button class="delete" onclick="sendDelete('${item._id}')">削除</button>
+        </li>
+      ).join("")}
+    </ul>
     <script>
-      function changeSort(order) {
-        localStorage.setItem("${type}_sortOrder", order);
-        location.reload();
+      function sendStatusChange(id, status) {
+        window.opener.postMessage({ type: 'statusChange', id, status }, "*");
+      }
+      function sendDelete(id) {
+        window.opener.postMessage({ type: 'delete', id }, "*");
       }
     </script>
-    </body></html>
-  `;
-
+  </body>
+  </html>;
   win.document.write(html);
   win.document.close();
+
+  if (type === "unclaimed") unclaimedWin = win;
+  else claimedWin = win;
 }
-
-
-// ✅ 初期読み込み
-loadMarkers();
-  }
-
-  // ✅ リスト連携用に保存（忘れずに！）
-  localStorage.setItem("claimedItems", JSON.stringify(claimedItems));
-  localStorage.setItem("unclaimedItems", JSON.stringify(unclaimedItems));
-}
-
 
 
