@@ -168,12 +168,17 @@ function openListTab(title, items, type) {
     if (sortOrder === "xy") {
       return a.X - b.X || a.Y - b.Y;
     } else {
-      return 0;
+      return 0; // 登録順そのまま
     }
   });
 
+  const listItems = sorted.map(i => {
+    const mark = i.目印 ? `🖍️${i.目印}` : "";
+    return `<li>${i.サーバー名} (${i.X}, ${i.Y}) Lv${i.レベル} ${mark}</li>`;
+  }).join("");
+
   const html = `
-  <html><head><meta charset='utf-8'><title>${title}</title></head><body>
+    <html><head><meta charset="utf-8"><title>${title}</title></head><body>
     <h2>${title}</h2>
     <label>並び順：
       <select onchange="changeSort(this.value)">
@@ -181,16 +186,15 @@ function openListTab(title, items, type) {
         <option value="recent" ${sortOrder === "recent" ? "selected" : ""}>登録順</option>
       </select>
     </label>
-    <ul>
-      ${sorted.map(i => `<li>${i.サーバー名} (${i.X}, ${i.Y}) Lv${i.レベル} ${i.目印 || ""}</li>`).join("")}
-    </ul>
+    <ul>${listItems}</ul>
     <script>
-    function changeSort(order) {
-      localStorage.setItem("${type}_sortOrder", order);
-      location.reload();
-    }
+      function changeSort(order) {
+        localStorage.setItem("${type}_sortOrder", order);
+        location.reload();
+      }
     </script>
-  </body></html>`;
+    </body></html>
+  `;
 
   win.document.write(html);
   win.document.close();
