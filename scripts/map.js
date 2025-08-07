@@ -211,7 +211,9 @@ function openListTab(title, items, type) {
           ${type === "unclaimed"
             ? `<button onclick="window.opener.handleStatusChange('${item._id}', '取得済み', '更新しました')">取得済みに</button>`
             : `<button onclick="window.opener.handleStatusChange('${item._id}', '未取得', '未取得に戻しました')">未取得に戻す</button>`}
-         <button class="delete" onclick="window.opener.handleDelete('${item._id}', '削除しました')">削除</button>
+         <button class="delete" onclick="deleteItem('${item._id}')">削除</button>
+
+
 
         </li>
         `).join("")}
@@ -224,3 +226,4 @@ function openListTab(title, items, type) {
   if (type === "unclaimed") unclaimedWin = win;
   else claimedWin = win;
 }
+
