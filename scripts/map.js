@@ -167,14 +167,23 @@ function openListTab(title, items, type) {
   const sorted = [...items].sort((a, b) => {
     if (sortOrder === "xy") {
       return a.X - b.X || a.Y - b.Y;
+    } else if (sortOrder === "level") {
+      return a.レベル - b.レベル || a.X - b.X;
     } else {
-      return 0; // 登録順そのまま
+      return 0; // 登録順
     }
   });
 
   const listItems = sorted.map(i => {
     const mark = i.目印 ? `🖍️${i.目印}` : "";
-    return `<li>${i.サーバー名} (${i.X}, ${i.Y}) Lv${i.レベル} ${mark}</li>`;
+    return `
+      <li>
+        ${i.サーバー名} (${i.X}, ${i.Y}) Lv${i.レベル} ${mark}<br>
+        <button onclick="window.opener.handleStatusChange('${i._id}', '${type === 'claimed' ? '未取得' : '取得済み'}', '${type === 'claimed' ? '未取得に戻しました' : '取得済みにしました'}')">
+          ${type === 'claimed' ? '未取得に戻す' : '取得済みにする'}
+        </button>
+        <button onclick="window.opener.handleDelete('${i._id}', '削除しました')">削除</button>
+      </li>`;
   }).join("");
 
   const html = `
@@ -182,7 +191,8 @@ function openListTab(title, items, type) {
     <h2>${title}</h2>
     <label>並び順：
       <select onchange="changeSort(this.value)">
-        <option value="xy" ${sortOrder === "xy" ? "selected" : ""}>X→Y</option>
+        <option value="xy" ${sortOrder === "xy" ? "selected" : ""}>X→Y順</option>
+        <option value="level" ${sortOrder === "level" ? "selected" : ""}>レベル順</option>
         <option value="recent" ${sortOrder === "recent" ? "selected" : ""}>登録順</option>
       </select>
     </label>
@@ -200,6 +210,7 @@ function openListTab(title, items, type) {
   win.document.close();
 }
 
+
 // ✅ 初期読み込み
 loadMarkers();
   }
@@ -208,5 +219,6 @@ loadMarkers();
   localStorage.setItem("claimedItems", JSON.stringify(claimedItems));
   localStorage.setItem("unclaimedItems", JSON.stringify(unclaimedItems));
 }
+
 
 
