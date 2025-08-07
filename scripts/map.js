@@ -28,7 +28,7 @@ for (let i = 0; i <= 1000; i++) {
   L.polyline([[0, i], [1000, i]], { color: "#ddd", weight: 0.3 }).addTo(map);
 }
 
-// ✅ マーカー色（レベル別）
+// ✅ マーカー色レベル別
 const levelColors = {
   "1": "blue", "2": "lightblue", "3": "green",
   "4": "lime", "5": "orange", "6": "red", "7": "purple"
@@ -117,15 +117,28 @@ async function loadMarkers() {
   }
 }
 
-// ✅ 状態変更（地図ポップアップ）
+// ✅ 状態変更
 window.changeStatus = async function (key) {
   await update(ref(db), { [`coordinates/${key}/取得状況`]: "取得済み" });
   await loadMarkers();
   refreshListTabs();
 };
 
+// ✅ 削除処理
+window.handleDelete = async function (key, message = "削除しました") {
+  try {
+    if (!confirm("本当に削除しますか？")) return;
+    await remove(ref(db, `coordinates/${key}`));
+    alert(message);
+    await loadMarkers();
+    refreshListTabs();
+  } catch (err) {
+    console.error("削除エラー:", err);
+    alert("削除に失敗しました");
+  }
+};
 
-// ✅ 状態変更（postMessage 経由）
+// ✅ 状態変更 (postMessage)
 window.handleStatusChange = async function (key, status, message) {
   await update(ref(db), { [`coordinates/${key}/取得状況`]: status });
   alert(message);
@@ -133,7 +146,7 @@ window.handleStatusChange = async function (key, status, message) {
   refreshListTabs();
 };
 
-// ✅ メッセージ受信（子ウィンドウ → 親ウィンドウ）
+// ✅ メッセージ受信
 window.addEventListener("message", async (event) => {
   const data = event.data;
   if (!data || typeof data !== "object") return;
@@ -148,4 +161,3 @@ window.addEventListener("message", async (event) => {
 
 // ✅ 初期読み込み
 loadMarkers();
-
