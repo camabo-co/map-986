@@ -1,8 +1,6 @@
 // ✅ Firebase SDK 読み込み
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-import {
-  getDatabase, ref, push, get, child, update, remove
-} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+import { getDatabase, ref, push, get, child, update, remove } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
 // ✅ Firebase 初期化
 const firebaseConfig = {
@@ -24,22 +22,26 @@ const map = L.map("map", {
   maxZoom: 2
 }).setView([500, 500], -2);
 
+// グリッド描画
 for (let i = 0; i <= 1000; i++) {
   L.polyline([[i, 0], [i, 1000]], { color: "#ddd", weight: 0.3 }).addTo(map);
   L.polyline([[0, i], [1000, i]], { color: "#ddd", weight: 0.3 }).addTo(map);
 }
 
+// ✅ マーカー色（レベル別）
 const levelColors = {
   "1": "blue", "2": "lightblue", "3": "green",
   "4": "lime", "5": "orange", "6": "red", "7": "purple"
 };
 
+// ✅ 状態管理
 let unclaimedItems = [], claimedItems = [];
+let claimedWin = null, unclaimedWin = null;
 
 // ✅ 登録処理
-const form = document.getElementById("coordinateForm");
-form.addEventListener("submit", async (e) => {
+document.getElementById("coordinateForm").addEventListener("submit", async (e) => {
   e.preventDefault();
+  const form = e.target;
   const formData = new FormData(form);
   const serverName = formData.get("サーバー名");
   const x = parseInt(formData.get("X"));
@@ -47,7 +49,7 @@ form.addEventListener("submit", async (e) => {
   const level = formData.get("レベル");
   const mark = formData.get("目印");
 
-  if (!/^[0-9]{3,4}$/.test(serverName) || isNaN(x) || x < 0 || x > 999 || isNaN(y) || y < 0 || y > 999) {
+  if (!/^\d{3,4}$/.test(serverName) || isNaN(x) || x < 0 || x > 999 || isNaN(y) || y < 0 || y > 999) {
     alert("入力内容を確認してください");
     return;
   }
@@ -76,7 +78,7 @@ form.addEventListener("submit", async (e) => {
   await loadMarkers();
 });
 
-// ✅ マーカー読み込み
+// ✅ マーカー表示
 async function loadMarkers() {
   unclaimedItems = [];
   claimedItems = [];
@@ -92,20 +94,22 @@ async function loadMarkers() {
     const item = items[key];
     item._id = key;
 
-    const coords = [parseInt(item.Y), parseInt(item.X)];
-    const color = levelColors[item.レベル] || "black";
-
     if (item.取得状況 === "未取得") {
       unclaimedItems.push(item);
-      const marker = L.circleMarker(coords, {
-        radius: 1, color, fillOpacity: 1
+
+      const marker = L.circleMarker([parseInt(item.Y), parseInt(item.X)], {
+        radius: 1,
+        color: levelColors[item.レベル] || "black",
+        fillOpacity: 1
       }).addTo(map);
+
       marker.bindPopup(`
         <b>サーバー名:</b> ${item.サーバー名}<br>
         <b>Lv:</b> ${item.レベル}<br>
+        <b>状態:</b> ${item.取得状況}<br>
         ${item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""}
-        <button onclick=\"changeStatus('${key}')\">取得済みに</button><br>
-        <button onclick=\"handleDelete('${key}')\">削除</button>
+        <button onclick="changeStatus('${item._id}')">取得済みに</button><br>
+        <button onclick="handleDelete('${item._id}')">削除</button>
       `);
     } else {
       claimedItems.push(item);
@@ -113,12 +117,29 @@ async function loadMarkers() {
   }
 }
 
-// ✅ 状態変更
+// ✅ 状態変更（地図ポップアップ）
 window.changeStatus = async function (key) {
   await update(ref(db), { [`coordinates/${key}/取得状況`]: "取得済み" });
   await loadMarkers();
+  refreshListTabs();
 };
 
 // ✅ 削除処理
-window.handleDelete = async function (key) {
-  if (!confirm("本当に削除しますか？
+window.handleDelete = async function (key, message = "削除しました") {
+  try {
+    if (!confirm("本当に削除しますか？")) return;
+    await remove(ref(db, `coordinates/${key}`));
+    alert(message);
+    await loadMarkers();
+    refreshListTabs();
+  } catch (err) {
+    console.error("削除エラー:", err);
+    alert("削除に失敗しました");
+  }
+};
+
+// ✅ 状態変更（postMessage 経由）
+window.handleStatusChange = async function (key, status, message) {
+  await update(ref(db), { [`coordinates/${key}/取得状況`]: status });
+  alert(message);
+  await loadMarkers();
