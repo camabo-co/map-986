@@ -143,3 +143,58 @@ window.handleStatusChange = async function (key, status, message) {
   await update(ref(db), { [`coordinates/${key}/取得状況`]: status });
   alert(message);
   await loadMarkers();
+  refreshListTabs();
+};
+
+// ✅ メッセージ受信
+window.addEventListener("message", async (event) => {
+  const data = event.data;
+  if (!data || typeof data !== "object") return;
+
+  if (data.type === "statusChange") {
+    await handleStatusChange(data.id, data.status, `状態を「${data.status}」に変更しました`);
+  }
+  if (data.type === "delete") {
+    await handleDelete(data.id, "削除しました");
+  }
+});
+
+// ✅ リストボタン
+function openListTab(title, items, type) {
+  const win = window.open("", type);
+
+  const sortOrder = localStorage.getItem(`${type}_sortOrder`) || "xy";
+  const sorted = [...items].sort((a, b) => {
+    if (sortOrder === "xy") {
+      return a.X - b.X || a.Y - b.Y;
+    } else {
+      return 0;
+    }
+  });
+
+  const html = `
+  <html><head><meta charset='utf-8'><title>${title}</title></head><body>
+    <h2>${title}</h2>
+    <label>並び順：
+      <select onchange="changeSort(this.value)">
+        <option value="xy" ${sortOrder === "xy" ? "selected" : ""}>X→Y</option>
+        <option value="recent" ${sortOrder === "recent" ? "selected" : ""}>登録順</option>
+      </select>
+    </label>
+    <ul>
+      ${sorted.map(i => `<li>${i.サーバー名} (${i.X}, ${i.Y}) Lv${i.レベル} ${i.目印 || ""}</li>`).join("")}
+    </ul>
+    <script>
+    function changeSort(order) {
+      localStorage.setItem("${type}_sortOrder", order);
+      location.reload();
+    }
+    </script>
+  </body></html>`;
+
+  win.document.write(html);
+  win.document.close();
+}
+
+// ✅ 初期読み込み
+loadMarkers();
