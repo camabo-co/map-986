@@ -1,7 +1,8 @@
+// ✅ Firebase SDK 読み込み
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 import { getDatabase, ref, push, get, child, update, remove } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
-// ✅ Firebase初期化
+// ✅ Firebase 初期化
 const firebaseConfig = {
   apiKey: "AIzaSyDdNI04D1xhQihN3DBDdF1_YAp6XRcErDw",
   authDomain: "maps3-986-ffbbd.firebaseapp.com",
@@ -11,11 +12,10 @@ const firebaseConfig = {
   messagingSenderId: "701191378459",
   appId: "1:701191378459:web:d2cf8d869f5cba869d0abe"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// ✅ 地図初期化
+// ✅ 地図初期化（1000×1000グリッド）
 const map = L.map("map", {
   crs: L.CRS.Simple,
   minZoom: -3,
@@ -27,6 +27,7 @@ for (let i = 0; i <= 1000; i++) {
   L.polyline([[0, i], [1000, i]], { color: "#ddd", weight: 0.3 }).addTo(map);
 }
 
+// ✅ レベル別マーカー色
 const levelColors = {
   "1": "blue",
   "2": "lightblue",
@@ -37,10 +38,11 @@ const levelColors = {
   "7": "purple"
 };
 
+// ✅ 状態管理変数
 let unclaimedItems = [], claimedItems = [];
 let claimedWin = null, unclaimedWin = null;
 
-// ✅ フォーム送信処理
+// ✅ 登録フォーム送信
 const form = document.getElementById("coordinateForm");
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -79,7 +81,7 @@ form.addEventListener("submit", async (e) => {
   await loadMarkers();
 });
 
-// ✅ マーカー読み込み
+// ✅ マーカー読み込みと分類
 async function loadMarkers() {
   unclaimedItems = [], claimedItems = [];
   map.eachLayer(layer => {
@@ -113,45 +115,60 @@ async function loadMarkers() {
     }
   }
 }
-// ✅ 状態変更（ポップアップ内）
-window.changeStatus = async function(key) {
+
+// ✅ 状態変更（ポップアップから）
+window.changeStatus = async function (key) {
   await update(ref(db), { [`coordinates/${key}/取得状況`]: "取得済み" });
   await loadMarkers();
   refreshListTabs();
 };
 
-// ✅ 削除処理（ポップアップ・リスト共通）
-window.handleDelete = async function(key, message = "削除しました") {
-  if (!confirm("本当に削除しますか？")) return;
+// ✅ 削除（全画面共通）
+window.handleDelete = async function (key, message = "削除しました") {
   try {
+    if (!confirm("本当に削除しますか？")) return;
     await remove(ref(db, `coordinates/${key}`));
     alert(message);
     await loadMarkers();
     refreshListTabs();
-  } catch (err) {
-    console.error("削除エラー:", err);
+  } catch (error) {
+    console.error("削除エラー:", error);
     alert("削除に失敗しました");
   }
 };
 
-// ✅ 状態変更（リスト画面用）
-window.handleStatusChange = async function(key, status, message) {
+// ✅ 状態変更（リスト画面から）
+window.handleStatusChange = async function (key, status, message) {
   await update(ref(db), { [`coordinates/${key}/取得状況`]: status });
   alert(message);
   await loadMarkers();
   refreshListTabs();
 };
 
-// ✅ リスト画面の再描画
+// ✅ メッセージ受信（リストからの postMessage に対応）
+window.addEventListener("message", async (event) => {
+  const data = event.data;
+  if (!data || typeof data !== "object") return;
+
+  if (data.type === "statusChange") {
+    await handleStatusChange(data.id, data.status, `状態を「${data.status}」に更新しました`);
+  }
+
+  if (data.type === "delete") {
+    await handleDelete(data.id, "削除しました");
+  }
+});
+
+// ✅ リスト再描画
 function refreshListTabs() {
   if (unclaimedWin && !unclaimedWin.closed) openListTab("未取得リスト", unclaimedItems, "unclaimed");
   if (claimedWin && !claimedWin.closed) openListTab("取得済みリスト", claimedItems, "claimed");
 }
 
-// ✅ 初回読み込み
+// ✅ 初期ロード
 loadMarkers();
 
-// ✅ ボタンでリスト画面を開く
+// ✅ リストボタンイベント
 document.getElementById("toggleUnclaimed").addEventListener("click", () => {
   openListTab("未取得リスト", unclaimedItems, "unclaimed");
 });
@@ -159,7 +176,7 @@ document.getElementById("toggleClaimed").addEventListener("click", () => {
   openListTab("取得済みリスト", claimedItems, "claimed");
 });
 
-// ✅ リスト画面生成
+// ✅ リストウィンドウ生成
 function openListTab(title, items, type) {
   const win = window.open("", type === "unclaimed" ? "unclaimedWin" : "claimedWin");
   const sortedItems = [...items].sort((a, b) => {
@@ -175,8 +192,16 @@ function openListTab(title, items, type) {
       body { font-family: sans-serif; padding: 20px; background: #fafafa; }
       h2 { color: ${type === "unclaimed" ? "#6c63ff" : "darkgreen"}; }
       ul { list-style: none; padding: 0; }
-      li { background: white; border: 1px solid #ccc; margin-bottom: 8px; padding: 10px; font-size: 14px; }
-      button { margin-right: 8px; padding: 5px 10px; font-size: 13px; background: ${type === "unclaimed" ? "#6c63ff" : "darkorange"}; color: white; border: none; border-radius: 4px; cursor: pointer; }
+      li {
+        background: white; border: 1px solid #ccc; margin-bottom: 8px;
+        padding: 10px; font-size: 14px;
+      }
+      button {
+        margin-right: 8px; padding: 5px 10px; font-size: 13px;
+        background: ${type === "unclaimed" ? "#6c63ff" : "darkorange"};
+        color: white; border: none; border-radius: 4px;
+        cursor: pointer;
+      }
       button.delete { background: #d9534f; }
     </style>
   </head>
@@ -186,19 +211,27 @@ function openListTab(title, items, type) {
       ${sortedItems.map(item => `
         <li>
           サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}<br>
-          ${type === "unclaimed" && item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""}
+          ${item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""}
           ${type === "unclaimed"
-            ? `<button onclick="window.opener.handleStatusChange('${item._id}', '取得済み', '更新しました')">取得済みに</button>`
-            : `<button onclick="window.opener.handleStatusChange('${item._id}', '未取得', '未取得に戻しました')">未取得に戻す</button>`}
-          <button class="delete" onclick="window.opener.handleDelete('${item._id}', '削除しました')">削除</button>
+            ? `<button onclick="sendStatusChange('${item._id}', '取得済み')">取得済みに</button>`
+            : `<button onclick="sendStatusChange('${item._id}', '未取得')">未取得に戻す</button>`}
+          <button class="delete" onclick="sendDelete('${item._id}')">削除</button>
         </li>
       `).join("")}
     </ul>
+    <script>
+      function sendStatusChange(id, status) {
+        window.opener.postMessage({ type: 'statusChange', id, status }, "*");
+      }
+      function sendDelete(id) {
+        window.opener.postMessage({ type: 'delete', id }, "*");
+      }
+    </script>
   </body>
   </html>`;
-
   win.document.write(html);
   win.document.close();
+
   if (type === "unclaimed") unclaimedWin = win;
   else claimedWin = win;
 }
