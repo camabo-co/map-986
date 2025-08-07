@@ -52,4 +52,43 @@
 
   // ✅ ボタンでリスト表示（新しいタブで開く）
   document.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("toggleUnclaimed").addEventListener("
+    document.getElementById("toggleUnclaimed").addEventListener("click", () => {
+      window.open("list_unclaimed.html", "_blank");
+    });
+    document.getElementById("toggleClaimed").addEventListener("click", () => {
+      window.open("list_claimed.html", "_blank");
+    });
+  });
+</script>
+
+<h2>座標マップアプリ</h2>
+
+<div class="buttons">
+  <button id="toggleUnclaimed">📋 未取得リスト</button>
+  <button id="toggleClaimed">📋 取得済みリスト</button>
+</div>
+
+<form id="coordinateForm">
+  <input type="text" name="サーバー名" placeholder="サーバー名（数字）" required>
+  <input type="number" name="X" placeholder="X座標 (0~999)" required>
+  <input type="number" name="Y" placeholder="Y座標 (0~999)" required>
+  <select name="レベル" required>
+    <option value="1">Lv1</option>
+    <option value="2">Lv2</option>
+    <option value="3">Lv3</option>
+    <option value="4">Lv4</option>
+    <option value="5">Lv5</option>
+    <option value="6">Lv6</option>
+    <option value="7">Lv7</option>
+  </select>
+  <input type="text" name="目印" placeholder="目印（任意）">
+  <button type="submit">登録</button>
+</form>
+
+<div id="map"></div>
+
+<!-- ✅ map.js のパスは scripts/map.js -->
+<script type="module" src="scripts/map.js"></script>
+
+</body>
+</html>
