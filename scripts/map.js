@@ -1,4 +1,4 @@
-// ✅ map.js 完全版（アクティブチェック除外 / 並べ替え / 検索 / 削除対応）
+// ✅ map.js 修正版（グリッド描画・地図サイズ修正）
 
 import {
   initializeApp
@@ -29,17 +29,19 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const dbRef = ref(db);
 
-// ✅ 地図描画
+// ✅ 地図描画（1000x1000）
 const map = L.map('map', {
   crs: L.CRS.Simple,
-  minZoom: -2,
-  maxZoom: 2
+  minZoom: -4,
+  maxZoom: 2,
+  zoomSnap: 1
 });
+
 const bounds = [[0, 0], [1000, 1000]];
-L.rectangle(bounds, { color: "#ccc", weight: 1 }).addTo(map);
+const image = L.rectangle(bounds, {color: "#0000", weight: 0}).addTo(map);
 map.fitBounds(bounds);
 
-// ✅ グリッド
+// ✅ グリッド（細かく）
 for (let i = 0; i <= 1000; i += 100) {
   L.polyline([[i, 0], [i, 1000]], { color: '#ccc', weight: 1 }).addTo(map);
   L.polyline([[0, i], [1000, i]], { color: '#ccc', weight: 1 }).addTo(map);
@@ -112,7 +114,7 @@ window.markClaimed = async function (key) {
   refreshListTabs();
 };
 
-// ✅ 削除（アクティブチェックなし）
+// ✅ 削除
 window.handleDelete = async function (key, message = "削除しました") {
   try {
     await remove(ref(db, `coordinates/${key}`));
@@ -125,9 +127,8 @@ window.handleDelete = async function (key, message = "削除しました") {
   }
 };
 
-// ✅ リストを再描画するタブを開き直す
+// ✅ タブ再描画
 window.refreshListTabs = function () {
-  // タブの再表示（未取得・取得済み）
   const unclaimed = window.open("", "unclaimed");
   if (unclaimed) unclaimed.location.reload();
 
@@ -135,14 +136,14 @@ window.refreshListTabs = function () {
   if (claimed) claimed.location.reload();
 };
 
-// ✅ リスト表示ボタン
+// ✅ ボタンイベント
 const btnUnclaimed = document.getElementById("toggleUnclaimed");
 btnUnclaimed.addEventListener("click", () => openListTab("unclaimed", false));
 
 const btnClaimed = document.getElementById("toggleClaimed");
 btnClaimed.addEventListener("click", () => openListTab("claimed", true));
 
-// ✅ 一覧出力・並び替え
+// ✅ 一覧出力（並べ替え・検索）
 function openListTab(name, isClaimed) {
   get(child(dbRef, "coordinates")).then((snapshot) => {
     if (snapshot.exists()) {
