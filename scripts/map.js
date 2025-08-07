@@ -201,7 +201,9 @@ function openListTab(title, items, type) {
       <style>
         body { font-family: sans-serif; padding: 20px; background: #fafafa; }
         h2 { color: ${type === "unclaimed" ? "#6c63ff" : "darkgreen"}; }
-        select { margin: 10px 0; padding: 4px 8px; }
+        select, input[type="text"] {
+          margin: 10px 5px; padding: 4px 8px; font-size: 14px;
+        }
         ul { list-style: none; padding: 0; }
         li {
           background: white; border: 1px solid #ccc; margin-bottom: 8px;
@@ -226,15 +228,19 @@ function openListTab(title, items, type) {
         </select>
       </label>
 
-      <ul>
+      <label>🔍 検索：
+        <input type="text" id="searchInput" oninput="filterList()" placeholder="例: 986, 山, Lv3">
+      </label>
+
+      <ul id="dataList">
         ${sortedItems.map(item => `
-          <li>
+          <li data-search="${[item.サーバー名, item.X, item.Y, item.レベル, item.目印].join(' ')}">
             サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}<br>
             ${item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""}
             ${type === "unclaimed"
-              ? `<button onclick="sendStatusChange('${item._id}', '取得済み')">取得済みに</button>`
-              : `<button onclick="sendStatusChange('${item._id}', '未取得')">未取得に戻す</button>`}
-            <button class="delete" onclick="sendDelete('${item._id}')">削除</button>
+              ? `<button onclick="sendAction('statusChange', '${item._id}', '取得済み')">取得済みに</button>`
+              : `<button onclick="sendAction('statusChange', '${item._id}', '未取得')">未取得に戻す</button>`}
+            <button class="delete" onclick="sendAction('delete', '${item._id}')">削除</button>
           </li>
         `).join("")}
       </ul>
@@ -245,16 +251,23 @@ function openListTab(title, items, type) {
           location.reload();
         }
 
-        function sendStatusChange(id, status) {
-          if (window.opener) {
-            window.opener.postMessage({ type: 'statusChange', id, status }, "*");
-          }
+        function filterList() {
+          const keyword = document.getElementById("searchInput").value.toLowerCase();
+          const items = document.querySelectorAll("#dataList li");
+          items.forEach(li => {
+            const content = li.dataset.search.toLowerCase();
+            li.style.display = content.includes(keyword) ? "block" : "none";
+          });
         }
 
-        function sendDelete(id) {
-          if (window.opener) {
-            window.opener.postMessage({ type: 'delete', id }, "*");
+        function sendAction(actionType, id, status = "") {
+          if (!window.opener) {
+            alert("親ウィンドウと通信できません");
+            return;
           }
+          const message = { type: actionType, id };
+          if (status) message.status = status;
+          window.opener.postMessage(message, "*");
         }
       </script>
     </body>
