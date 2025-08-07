@@ -175,55 +175,84 @@ document.getElementById("toggleClaimed").addEventListener("click", () => {
 
 // ✅ リスト画面表示
 function openListTab(title, items, type) {
-  const win = window.open("", type === "unclaimed" ? "unclaimedWin" : "claimedWin");
+  const win = window.open("about:blank", type === "unclaimed" ? "unclaimedWin" : "claimedWin");
   const sortedItems = [...items].sort((a, b) => {
     return a.レベル - b.レベル || a.サーバー名 - b.サーバー名 || a.X - b.X || a.Y - b.Y;
   });
+
   const html = `<!DOCTYPE html>
-    <html lang="ja">
-    <head>
-      <meta charset="UTF-8">
-      <title>${title}</title>
-      <style>
-        body { font-family: sans-serif; padding: 20px; background: #fafafa; }
-        h2 { color: ${type === "unclaimed" ? "#6c63ff" : "darkgreen"}; }
-        ul { list-style: none; padding: 0; }
-        li {
-          background: white; border: 1px solid #ccc; margin-bottom: 8px;
-          padding: 10px; font-size: 14px;
-        }
-        button {
-          margin-right: 8px; padding: 5px 10px; font-size: 13px;
-          background: ${type === "unclaimed" ? "#6c63ff" : "darkorange"};
-          color: white; border: none; border-radius: 4px;
-          cursor: pointer;
-        }
-        button.delete { background: #d9534f; }
-      </style>
-    </head>
-    <body>
-      <h2>📋 ${title}</h2>
-      <ul>
-        ${sortedItems.map(item => `
-         <li>
+  <html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <title>${title}</title>
+    <style>
+      body { font-family: sans-serif; padding: 20px; background: #fafafa; }
+      h2 { color: ${type === "unclaimed" ? "#6c63ff" : "darkgreen"}; }
+      ul { list-style: none; padding: 0; }
+      li {
+        background: white; border: 1px solid #ccc; margin-bottom: 8px;
+        padding: 10px; font-size: 14px;
+      }
+      button {
+        margin-right: 8px; padding: 5px 10px; font-size: 13px;
+        background: ${type === "unclaimed" ? "#6c63ff" : "darkorange"};
+        color: white; border: none; border-radius: 4px;
+        cursor: pointer;
+      }
+      button.delete { background: #d9534f; }
+    </style>
+  </head>
+  <body>
+    <h2>📋 ${title}</h2>
+    <ul>
+      ${sortedItems.map(item => `
+        <li>
           サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}<br>
           ${type === "unclaimed" && item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""}
-          ${type === "unclaimed"
-            ? `<button onclick="window.opener.handleStatusChange('${item._id}', '取得済み', '更新しました')">取得済みに</button>`
-            : `<button onclick="window.opener.handleStatusChange('${item._id}', '未取得', '未取得に戻しました')">未取得に戻す</button>`}
-         <button class="delete" onclick="deleteItem('${item._id}')">削除</button>
-
-
-
+          <button onclick="handleStatusChange('${item._id}', '${type === "unclaimed" ? "取得済み" : "未取得"}')">
+            ${type === "unclaimed" ? "取得済みに" : "未取得に戻す"}
+          </button>
+          <button class="delete" onclick="deleteItem('${item._id}')">削除</button>
         </li>
-        `).join("")}
-      </ul>
-    </body>
-    </html>`;
+      `).join("")}
+    </ul>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+      import { getDatabase, ref, update, remove } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyDdNI04D1xhQihN3DBDdF1_YAp6XRcErDw",
+        authDomain: "maps3-986-ffbbd.firebaseapp.com",
+        databaseURL: "https://maps3-986-ffbbd-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "maps3-986-ffbbd",
+        storageBucket: "maps3-986-ffbbd.appspot.com",
+        messagingSenderId: "701191378459",
+        appId: "1:701191378459:web:d2cf8d869f5cba869d0abe"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const db = getDatabase(app);
+
+      async function deleteItem(id) {
+        if (!confirm("本当に削除しますか？")) return;
+        await remove(ref(db, "coordinates/" + id));
+        alert("削除しました");
+        location.reload();
+      }
+
+      async function handleStatusChange(id, status) {
+        await update(ref(db), { ["coordinates/" + id + "/取得状況"]: status });
+        alert("状態を更新しました");
+        location.reload();
+      }
+    </script>
+  </body>
+  </html>`;
+
   win.document.write(html);
   win.document.close();
 
   if (type === "unclaimed") unclaimedWin = win;
   else claimedWin = win;
 }
-
