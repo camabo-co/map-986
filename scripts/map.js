@@ -106,6 +106,7 @@ async function loadMarkers() {
         <b>サーバー名:</b> ${item.サーバー名}<br>
         <b>Lv:</b> ${item.レベル}<br>
         <b>状態:</b> ${item.取得状況}<br>
+        <b>X:</b> ${item.X} / <b>Y:</b> ${item.Y}<br>
         ${item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""}
         <button onclick="changeStatus('${item._id}')">取得済みに</button><br>
         <button onclick="handleDelete('${item._id}')">削除</button>
@@ -235,3 +236,4 @@ function openListTab(title, items, type) {
   if (type === "unclaimed") unclaimedWin = win;
   else claimedWin = win;
 }
+
