@@ -1,4 +1,3 @@
-// ✅ Firebase SDK 読み込み
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 import { getDatabase, ref, push, get, child, update, remove } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
@@ -15,7 +14,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// ✅ 地図初期化（1000×1000グリッド）
 const map = L.map("map", {
   crs: L.CRS.Simple,
   minZoom: -3,
@@ -27,33 +25,30 @@ for (let i = 0; i <= 1000; i++) {
   L.polyline([[0, i], [1000, i]], { color: "#ddd", weight: 0.3 }).addTo(map);
 }
 
-// ✅ レベル別マーカー色
 const levelColors = {
-  "1": "blue",
-  "2": "lightblue",
-  "3": "green",
-  "4": "lime",
-  "5": "orange",
-  "6": "red",
-  "7": "purple"
+  "1": "blue", "2": "lightblue", "3": "green", "4": "lime",
+  "5": "orange", "6": "red", "7": "purple"
 };
 
-// ✅ 状態管理変数
 let unclaimedItems = [], claimedItems = [];
-let claimedWin = null, unclaimedWin = null;
+let unclaimedWin = null, claimedWin = null;
 
-// ✅ 登録フォーム送信
-const form = document.getElementById("coordinateForm");
-form.addEventListener("submit", async (e) => {
+document.getElementById("toggleUnclaimed").onclick = () => openListTab("未取得リスト", unclaimedItems, "unclaimed");
+document.getElementById("toggleClaimed").onclick = () => openListTab("取得済みリスト", claimedItems, "claimed");
+document.getElementById("exportUnclaimedCSV").onclick = () => exportCSV(unclaimedItems, "unclaimed");
+document.getElementById("exportClaimedCSV").onclick = () => exportCSV(claimedItems, "claimed");
+document.getElementById("dedupeButton").onclick = dedupeCoordinates;
+
+document.getElementById("coordinateForm").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const formData = new FormData(form);
-  const serverName = formData.get("サーバー名");
-  const x = parseInt(formData.get("X"));
-  const y = parseInt(formData.get("Y"));
-  const level = formData.get("レベル");
-  const mark = formData.get("目印");
+  const form = new FormData(e.target);
+  const serverName = form.get("サーバー名");
+  const x = parseInt(form.get("X"));
+  const y = parseInt(form.get("Y"));
+  const level = form.get("レベル");
+  const mark = form.get("目印");
 
-  if (!/^\d{3,4}$/.test(serverName) || isNaN(x) || x < 0 || x > 999 || isNaN(y) || y < 0 || y > 999) {
+  if (!/^\d{3,4}$/.test(serverName) || isNaN(x) || isNaN(y)) {
     alert("入力内容を確認してください");
     return;
   }
@@ -61,8 +56,7 @@ form.addEventListener("submit", async (e) => {
   const snapshot = await get(child(ref(db), "coordinates"));
   const items = snapshot.exists() ? snapshot.val() : {};
   for (const key in items) {
-    const item = items[key];
-    if (parseInt(item.X) === x && parseInt(item.Y) === y) {
+    if (parseInt(items[key].X) === x && parseInt(items[key].Y) === y) {
       alert(`この座標 X:${x}, Y:${y} はすでに登録されています`);
       return;
     }
@@ -76,12 +70,39 @@ form.addEventListener("submit", async (e) => {
     取得状況: "未取得",
     目印: mark || ""
   });
-  alert("登録しました！");
-  form.reset();
+
+  alert("登録しました");
+  e.target.reset();
   await loadMarkers();
 });
 
-// ✅ マーカー読み込みと分類
+window.changeStatus = async (key) => {
+  await update(ref(db), { [`coordinates/${key}/取得状況`]: "取得済み" });
+  await loadMarkers();
+  refreshListTabs();
+};
+
+window.handleDelete = async (key, msg = "削除しました") => {
+  if (!confirm("本当に削除しますか？")) return;
+  await remove(ref(db, `coordinates/${key}`));
+  alert(msg);
+  await loadMarkers();
+  refreshListTabs();
+};
+
+window.handleStatusChange = async (key, status, msg) => {
+  await update(ref(db), { [`coordinates/${key}/取得状況`]: status });
+  alert(msg);
+  await loadMarkers();
+  refreshListTabs();
+};
+
+window.addEventListener("message", async (e) => {
+  const d = e.data;
+  if (d?.type === "statusChange") await handleStatusChange(d.id, d.status, `状態を「${d.status}」に変更しました`);
+  if (d?.type === "delete") await handleDelete(d.id);
+});
+
 async function loadMarkers() {
   unclaimedItems = [], claimedItems = [];
   map.eachLayer(layer => {
@@ -93,147 +114,105 @@ async function loadMarkers() {
   for (const key in items) {
     const item = items[key];
     item._id = key;
+    item.X = parseInt(item.X);
+    item.Y = parseInt(item.Y);
 
-    if (item.取得状況 === "未取得") {
-      unclaimedItems.push(item);
-      const marker = L.circleMarker([parseInt(item.Y), parseInt(item.X)], {
-        radius: 1,
-        color: levelColors[item.レベル] || "black",
-        fillOpacity: 1
-      }).addTo(map);
+    const marker = L.circleMarker([item.Y, item.X], {
+      radius: 1,
+      color: levelColors[item.レベル] || "black",
+      fillOpacity: 1
+    }).addTo(map);
 
-      marker.bindPopup(`
-        <b>サーバー名:</b> ${item.サーバー名}<br>
-        <b>Lv:</b> ${item.レベル}<br>
-        <b>状態:</b> ${item.取得状況}<br>
-        <b>X:</b> ${item.X} / <b>Y:</b> ${item.Y}<br>
-        ${item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""}
-        <button onclick="changeStatus('${item._id}')">取得済みに</button><br>
-        <button onclick="handleDelete('${item._id}')">削除</button>
-      `);
-    } else {
-      claimedItems.push(item);
-    }
+    const popupHTML = `
+      <b>サーバー名:</b> ${item.サーバー名}<br>
+      <b>Lv:</b> ${item.レベル}<br>
+      <b>X:</b> ${item.X} / <b>Y:</b> ${item.Y}<br>
+      <b>状態:</b> ${item.取得状況}<br>
+      ${item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""}
+      <button onclick="changeStatus('${item._id}')">取得済みに</button><br>
+      <button onclick="handleDelete('${item._id}')">削除</button>
+    `;
+    marker.bindPopup(popupHTML);
+
+    if (item.取得状況 === "未取得") unclaimedItems.push(item);
+    else claimedItems.push(item);
   }
 }
 
-// ✅ 状態変更（ポップアップから）
-window.changeStatus = async function (key) {
-  await update(ref(db), { [`coordinates/${key}/取得状況`]: "取得済み" });
-  await loadMarkers();
-  refreshListTabs();
-};
-
-// ✅ 削除（全画面共通）
-window.handleDelete = async function (key, message = "削除しました") {
-  try {
-    if (!confirm("本当に削除しますか？")) return;
-    await remove(ref(db, `coordinates/${key}`));
-    alert(message);
-    await loadMarkers();
-    refreshListTabs();
-  } catch (error) {
-    console.error("削除エラー:", error);
-    alert("削除に失敗しました");
-  }
-};
-
-// ✅ 状態変更（リスト画面から）
-window.handleStatusChange = async function (key, status, message) {
-  await update(ref(db), { [`coordinates/${key}/取得状況`]: status });
-  alert(message);
-  await loadMarkers();
-  refreshListTabs();
-};
-
-// ✅ メッセージ受信（リストからの postMessage に対応）
-window.addEventListener("message", async (event) => {
-  const data = event.data;
-  if (!data || typeof data !== "object") return;
-
-  if (data.type === "statusChange") {
-    await handleStatusChange(data.id, data.status, `状態を「${data.status}」に更新しました`);
-  }
-
-  if (data.type === "delete") {
-    await handleDelete(data.id, "削除しました");
-  }
-});
-
-// ✅ リスト再描画
-function refreshListTabs() {
-  if (unclaimedWin && !unclaimedWin.closed) openListTab("未取得リスト", unclaimedItems, "unclaimed");
-  if (claimedWin && !claimedWin.closed) openListTab("取得済みリスト", claimedItems, "claimed");
-}
-
-// ✅ 初期ロード
-loadMarkers();
-
-// ✅ リストボタンイベント
-document.getElementById("toggleUnclaimed").addEventListener("click", () => {
-  openListTab("未取得リスト", unclaimedItems, "unclaimed");
-});
-document.getElementById("toggleClaimed").addEventListener("click", () => {
-  openListTab("取得済みリスト", claimedItems, "claimed");
-});
-
-// ✅ リストウィンドウ生成
 function openListTab(title, items, type) {
-  const win = window.open("", type === "unclaimed" ? "unclaimedWin" : "claimedWin");
-  const sortedItems = [...items].sort((a, b) => {
-    return a.レベル - b.レベル || a.サーバー名 - b.サーバー名 || a.X - b.X || a.Y - b.Y;
-  });
-
-  const html = `<!DOCTYPE html>
-  <html lang="ja">
-  <head>
-    <meta charset="UTF-8">
-    <title>${title}</title>
-    <style>
-      body { font-family: sans-serif; padding: 20px; background: #fafafa; }
-      h2 { color: ${type === "unclaimed" ? "#6c63ff" : "darkgreen"}; }
-      ul { list-style: none; padding: 0; }
-      li {
-        background: white; border: 1px solid #ccc; margin-bottom: 8px;
-        padding: 10px; font-size: 14px;
-      }
-      button {
-        margin-right: 8px; padding: 5px 10px; font-size: 13px;
-        background: ${type === "unclaimed" ? "#6c63ff" : "darkorange"};
-        color: white; border: none; border-radius: 4px;
-        cursor: pointer;
-      }
-      button.delete { background: #d9534f; }
-    </style>
-  </head>
-  <body>
-    <h2>📋 ${title}</h2>
-    <ul>
-      ${sortedItems.map(item => `
-        <li>
-          サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}<br>
-          ${item.目印 ? `<b>🖍️目印:</b> ${item.目印}<br>` : ""}
-          ${type === "unclaimed"
-            ? `<button onclick="sendStatusChange('${item._id}', '取得済み')">取得済みに</button>`
-            : `<button onclick="sendStatusChange('${item._id}', '未取得')">未取得に戻す</button>`}
-          <button class="delete" onclick="sendDelete('${item._id}')">削除</button>
-        </li>
-      `).join("")}
-    </ul>
-    <script>
-      function sendStatusChange(id, status) {
-        window.opener.postMessage({ type: 'statusChange', id, status }, "*");
-      }
-      function sendDelete(id) {
-        window.opener.postMessage({ type: 'delete', id }, "*");
-      }
-    </script>
-  </body>
-  </html>`;
-  win.document.write(html);
+  const win = window.open("", type);
+  const sorted = [...items].sort((a, b) => a.レベル - b.レベル || a.サーバー名 - b.サーバー名 || a.X - b.X || a.Y - b.Y);
+  win.document.write(`
+    <!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>${title}</title>
+    <style>body{font-family:sans-serif;padding:20px;background:#fafafa}h2{color:${type==="unclaimed"?"#6c63ff":"darkgreen"}}li{background:white;margin:5px 0;padding:10px;border:1px solid #ccc}button{margin-right:5px;padding:5px 10px;font-size:13px;border:none;border-radius:4px;cursor:pointer}button.delete{background:#d9534f;color:white}button.status{background:${type==="unclaimed"?"#6c63ff":"darkorange"};color:white}</style></head><body>
+    <h2>📋 ${title}</h2><ul>
+    ${sorted.map(item => `
+      <li>
+        サーバー名: ${item.サーバー名} / X:${item.X}, Y:${item.Y} / Lv${item.レベル}<br>
+        ${item.目印 ? `🖍️目印: ${item.目印}<br>` : ""}
+        <button class="status" onclick="window.opener.postMessage({type:'statusChange',id:'${item._id}',status:'${type==="unclaimed"?"取得済み":"未取得"}'},'*')">
+          ${type==="unclaimed"?"取得済みに":"未取得に戻す"}
+        </button>
+        <button class="delete" onclick="window.opener.postMessage({type:'delete',id:'${item._id}'},'*')">削除</button>
+      </li>
+    `).join("")}
+    </ul></body></html>
+  `);
   win.document.close();
 
   if (type === "unclaimed") unclaimedWin = win;
   else claimedWin = win;
 }
 
+function refreshListTabs() {
+  if (unclaimedWin && !unclaimedWin.closed) openListTab("未取得リスト", unclaimedItems, "unclaimed");
+  if (claimedWin && !claimedWin.closed) openListTab("取得済みリスト", claimedItems, "claimed");
+}
+
+function exportCSV(items, type) {
+  const csv = ["サーバー名,X,Y,レベル,取得状況,目印"];
+  items.forEach(i => {
+    const line = [i.サーバー名, i.X, i.Y, i.レベル, i.取得状況, `"${i.目印 || ""}"`];
+    csv.push(line.join(","));
+  });
+
+  const bom = new Uint8Array([0xEF, 0xBB, 0xBF]); // UTF-8 BOM
+  const blob = new Blob([bom, csv.join("\n")], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${type}_list.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+async function dedupeCoordinates() {
+  const snapshot = await get(child(ref(db), "coordinates"));
+  if (!snapshot.exists()) return alert("データがありません");
+
+  const all = snapshot.val();
+  const seen = new Set();
+  const deletes = [];
+
+  for (const key in all) {
+    const item = all[key];
+    const keyXY = `${item.X},${item.Y}`;
+    if (seen.has(keyXY)) {
+      deletes.push(key);
+    } else {
+      seen.add(keyXY);
+    }
+  }
+
+  for (const key of deletes) {
+    await remove(ref(db, `coordinates/${key}`));
+  }
+
+  alert(`重複座標の整理が完了しました（削除：${deletes.length}件）`);
+  await loadMarkers();
+  refreshListTabs();
+}
+
+loadMarkers();
