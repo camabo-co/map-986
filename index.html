@@ -1,58 +1,226 @@
-// ✅ map.js - 安定版＋ズーム対応（Leaflet + Firebase） import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>座標マップ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background: #f2f2f2;
+    }
+    #map {
+      height: 80vh;
+      width: 100%;
+      max-width: 1000px;
+      margin: 0 auto;
+      background-color: #e6e6e6;
+    }
+    form, .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin: 10px auto;
+    }
+    input, select, button, textarea {
+      padding: 6px;
+      font-size: 14px;
+    }
+    .csv-box {
+      margin: 20px auto;
+    }
+  </style>
+</head>
+<body>
 
-import { getDatabase, ref, push, get, child, update, remove } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+<!-- ✅ パスワード保護 -->
+<script>
+  const password = prompt("パスワードを入力してください:");
+  if (password !== "wareranochonnma") {
+    alert("パスワードが間違っています。");
+    document.body.innerHTML = "<h2>アクセスが拒否されました</h2>";
+    throw new Error("Unauthorized access");
+  }
+</script>
 
-// ✅ Firebase初期化 const firebaseConfig = { apiKey: "AIzaSyDdNI04D1xhQihN3DBDdF1_YAp6XRcErDw", authDomain: "maps3-986-ffbbd.firebaseapp.com", databaseURL: "https://maps3-986-ffbbd-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "maps3-986-ffbbd", storageBucket: "maps3-986-ffbbd.appspot.com", messagingSenderId: "701191378459", appId: "1:701191378459:web:d2cf8d869f5cba869d0abe" }; const app = initializeApp(firebaseConfig); const db = getDatabase(app);
+<h2>座標マップアプリ</h2>
 
-// ✅ 地図初期化 const map = L.map('map', { minZoom: 0, maxZoom: 5, zoomControl: true, zoomSnap: 1 }).setView([500, 500], 1);
+<div class="buttons">
+  <button id="toggleUnclaimed">📋 未取得リスト</button>
+  <button id="toggleClaimed">📋 取得済みリスト</button>
+  <button id="exportUnclaimedCSV">📤 未取得CSV</button>
+  <button id="exportClaimedCSV">📤 取得済みCSV</button>
+  <button id="dedupeButton">🧹 重複座標を整理</button>
+</div>
 
-// グリッドの背景 const gridSize = 1000; const canvas = document.createElement('canvas'); canvas.width = gridSize; canvas.height = gridSize; const ctx = canvas.getContext('2d'); ctx.strokeStyle = '#ccc'; ctx.lineWidth = 0.5; for (let i = 0; i <= gridSize; i += 100) { ctx.moveTo(i, 0); ctx.lineTo(i, gridSize); ctx.moveTo(0, i); ctx.lineTo(gridSize, i); } ctx.stroke(); const gridUrl = canvas.toDataURL(); L.imageOverlay(gridUrl, [[0, 0], [1000, 1000]]).addTo(map); map.setMaxBounds([[0, 0], [1000, 1000]]);
+<!-- ✅ 登録フォーム -->
+<form id="coordinateForm">
+  <input type="text" name="サーバー名" placeholder="サーバー名（数字）" required>
+  <input type="number" name="X" placeholder="X座標 (0~999)" required>
+  <input type="number" name="Y" placeholder="Y座標 (0~999)" required>
+  <select name="レベル" required>
+    <option value="1">Lv1</option>
+    <option value="2">Lv2</option>
+    <option value="3">Lv3</option>
+    <option value="4">Lv4</option>
+    <option value="5">Lv5</option>
+    <option value="6">Lv6</option>
+    <option value="7">Lv7</option>
+  </select>
+  <input type="text" name="目印" placeholder="目印（任意）">
+  <button type="submit">登録</button>
+</form>
 
-// ✅ レベル色分け const levelColors = { 1: 'blue', 2: 'green', 3: 'orange', 4: 'purple', 5: 'red', 6: 'brown', 7: 'black' };
+<!-- ✅ CSV取り込み -->
+<div class="csv-box">
+  <textarea id="csvInput" placeholder="サーバー名,X,Y,レベル,目印（任意）を1行ずつ入力" rows="5" cols="60"></textarea><br>
+  <button onclick="importCSV()">📥 CSVから一括登録</button>
+</div>
 
-// ✅ マーカー描画 let markers = []; window.loadMarkers = async function () { markers.forEach(m => m.remove()); markers = [];
+<div id="map"></div>
 
-const snap = await get(child(ref(db), "coordinates")); if (!snap.exists()) return; const data = snap.val();
+<!-- ✅ 地図処理 -->
+<script type="module" src="scripts/map.js"></script>
 
-for (const key in data) { const item = data[key]; if (item.取得状況 !== "未取得") continue;
+<!-- ✅ 補助機能 -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+  import {
+    getDatabase, ref, push, get, child, remove
+  } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
-const marker = L.circleMarker([item.Y, item.X], {
-  radius: 6,
-  color: levelColors[item.レベル] || 'gray',
-  fillOpacity: 0.9
-}).addTo(map);
+  const app = initializeApp({
+    apiKey: "AIzaSyDdNI04D1xhQihN3DBDdF1_YAp6XRcErDw",
+    authDomain: "maps3-986-ffbbd.firebaseapp.com",
+    databaseURL: "https://maps3-986-ffbbd-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "maps3-986-ffbbd",
+    storageBucket: "maps3-986-ffbbd.appspot.com",
+    messagingSenderId: "701191378459",
+    appId: "1:701191378459:web:d2cf8d869f5cba869d0abe"
+  });
 
-marker.bindPopup(`
-  <strong>サーバー:</strong> ${item.サーバー名}<br>
-  <strong>座標:</strong> (${item.X}, ${item.Y})<br>
-  <strong>レベル:</strong> Lv${item.レベル}<br>
-  <strong>目印:</strong> ${item.目印 || ''}<br><br>
-  <button onclick="markClaimed('${key}')">✅ 取得済みにする</button>
-  <button onclick="deleteCoordinate('${key}')">🗑️ 削除</button>
-`);
-markers.push(marker);
+  const db = getDatabase(app);
 
-} };
+  // ✅ CSVから一括登録
+  window.importCSV = async function () {
+    const text = document.getElementById("csvInput").value.trim();
+    if (!text) return alert("CSVデータを入力してください");
 
-window.markClaimed = async function (key) { await update(ref(db, coordinates/${key}), { 取得状況: "取得済み" }); window.loadMarkers(); };
+    const lines = text.split("\n");
+    let success = 0, fail = 0;
 
-window.deleteCoordinate = async function (key) { if (confirm("本当に削除しますか？")) { await remove(ref(db, coordinates/${key})); window.loadMarkers(); } };
+    const snap = await get(child(ref(db), "coordinates"));
+    const existing = snap.exists() ? snap.val() : {};
+    const existsMap = {};
+    for (const key in existing) {
+      const item = existing[key];
+      existsMap[`${item.X},${item.Y}`] = true;
+    }
 
-window.addEventListener("DOMContentLoaded", async () => { // 登録フォーム処理 const form = document.getElementById("coordinateForm"); form.onsubmit = async (e) => { e.preventDefault(); const fd = new FormData(form); const data = Object.fromEntries(fd); const newCoord = { サーバー名: data["サーバー名"], X: parseInt(data.X), Y: parseInt(data.Y), レベル: data.レベル, 取得状況: "未取得", 目印: data["目印"] || "" }; await push(ref(db, "coordinates"), newCoord); form.reset(); window.loadMarkers(); };
+    for (const line of lines) {
+      const [サーバー名, X, Y, レベル, 目印] = line.split(",").map(x => x.trim());
+      if (!/^\d{3,4}$/.test(サーバー名) || isNaN(X) || isNaN(Y) || !レベル) {
+        fail++;
+        continue;
+      }
+      const keyXY = `${parseInt(X)},${parseInt(Y)}`;
+      if (existsMap[keyXY]) {
+        fail++;
+        continue;
+      }
 
-// リストボタン document.getElementById("toggleUnclaimed").onclick = () => openListTab("未取得"); document.getElementById("toggleClaimed").onclick = () => openListTab("取得済み");
+      await push(ref(db, "coordinates"), {
+        サーバー名,
+        X: parseInt(X),
+        Y: parseInt(Y),
+        レベル,
+        取得状況: "未取得",
+        目印: 目印 || ""
+      });
 
-window.loadMarkers(); });
+      success++;
+    }
 
-function openListTab(status) { const win = window.open(); win.document.write("<h2>" + status + "リスト</h2>"); win.document.write("<ul id='list'></ul>");
+    alert(`登録完了：成功 ${success} 件 / 失敗 ${fail} 件`);
+    if (window.loadMarkers) window.loadMarkers();
+  };
 
-get(child(ref(db), "coordinates")).then((snap) => { if (!snap.exists()) return; const data = Object.values(snap.val()).filter(d => d.取得状況 === status); data.sort((a, b) => a.レベル - b.レベル || a.サーバー名.localeCompare(b.サーバー名) || a.X - b.X || a.Y - b.Y);
+  // ✅ 重複整理
+  window.deduplicateCoordinates = async function () {
+    const snap = await get(child(ref(db), "coordinates"));
+    if (!snap.exists()) return alert("データが存在しません");
 
-for (const d of data) {
-  const li = document.createElement("li");
-  li.textContent = `Lv${d.レベル} (${d.X},${d.Y}) - ${d.サーバー名} ${d.目印 || ""}`;
-  win.document.getElementById("list").appendChild(li);
-}
+    const allData = snap.val();
+    const seen = {};
+    const deletions = [];
 
-}); }
+    for (const key in allData) {
+      const item = allData[key];
+      const coordKey = `${item.X},${item.Y}`;
+      if (seen[coordKey]) {
+        deletions.push(key);
+      } else {
+        seen[coordKey] = true;
+      }
+    }
 
+    for (const delKey of deletions) {
+      await remove(ref(db, `coordinates/${delKey}`));
+    }
+
+    alert(`重複整理完了：削除 ${deletions.length} 件`);
+    if (window.loadMarkers) window.loadMarkers();
+    if (window.refreshListTabs) window.refreshListTabs();
+  };
+
+  // ✅ CSV出力（未取得）
+  window.exportUnclaimedCSV = async function () {
+    const snap = await get(child(ref(db), "coordinates"));
+    if (!snap.exists()) return alert("データがありません");
+
+    const rows = [["サーバー名", "X", "Y", "レベル", "目印", "取得状況"]];
+    for (const key in snap.val()) {
+      const item = snap.val()[key];
+      if (item.取得状況 === "未取得") {
+        rows.push([item.サーバー名, item.X, item.Y, item.レベル, item.目印 || "", item.取得状況]);
+      }
+    }
+    const csv = "\uFEFF" + rows.map(r => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "未取得座標.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ✅ CSV出力（取得済み）
+  window.exportClaimedCSV = async function () {
+    const snap = await get(child(ref(db), "coordinates"));
+    if (!snap.exists()) return alert("データがありません");
+
+    const rows = [["サーバー名", "X", "Y", "レベル", "目印", "取得状況"]];
+    for (const key in snap.val()) {
+      const item = snap.val()[key];
+      if (item.取得状況 === "取得済み") {
+        rows.push([item.サーバー名, item.X, item.Y, item.レベル, item.目印 || "", item.取得状況]);
+      }
+    }
+    const csv = "\uFEFF" + rows.map(r => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "取得済み座標.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+</script>
+
+</body>
+</html>
