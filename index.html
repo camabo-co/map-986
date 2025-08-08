@@ -209,8 +209,41 @@
     a.click();
     URL.revokeObjectURL(url);
   };
+  // ✅ 未取得CSV出力
+window.exportUnclaimedCSV = async function () {
+  const snap = await get(child(ref(db), "coordinates"));
+  if (!snap.exists()) return alert("データがありません");
+
+  const allData = snap.val();
+  const rows = [["サーバー名", "X", "Y", "レベル", "目印", "取得状況"]];
+
+  for (const key in allData) {
+    const item = allData[key];
+    if (item.取得状況 === "未取得") {
+      rows.push([
+        item.サーバー名,
+        item.X,
+        item.Y,
+        item.レベル,
+        item.目印 || "",
+        item.取得状況
+      ]);
+    }
+  }
+
+  const csv = "\uFEFF" + rows.map(r => r.join(",")).join("\n"); // BOM付き
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "未取得座標.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
 </script>
 
 </body>
 </html>
+
 
