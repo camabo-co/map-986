@@ -52,9 +52,11 @@
 <div class="buttons">
   <button id="toggleUnclaimed">📋 未取得リスト</button>
   <button id="toggleClaimed">📋 取得済みリスト</button>
-  <button onclick="exportClaimedCSV()">📤 取得済みCSV出力</button>
-  <button onclick="deduplicateCoordinates()">🧹 重複座標を整理</button>
+  <button id="exportUnclaimedCSV">📤 未取得CSV</button>
+  <button id="exportClaimedCSV">📤 取得済みCSV</button>
+  <button id="dedupeButton">🧹 重複座標を整理</button>
 </div>
+
 
 <!-- ✅ 登録フォーム -->
 <form id="coordinateForm">
@@ -211,3 +213,4 @@
 
 </body>
 </html>
+
