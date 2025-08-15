@@ -62,37 +62,32 @@
     <br />
     <button onclick="checkPassword()">認証</button>
   </div>  <div id="mainContent" class="hidden">
-    <h1>座標マップ（未取得のみ表示）</h1><form onsubmit="event.preventDefault(); registerCoordinate();">
-  <input type="text" id="server" placeholder="サーバー名" required />
-  <input type="number" id="x" placeholder="X座標" required />
-  <input type="number" id="y" placeholder="Y座標" required />
-  <select id="level">
-    <option value="1">Lv1</option>
-    <option value="2">Lv2</option>
-    <option value="3">Lv3</option>
-    <option value="4">Lv4</option>
-    <option value="5">Lv5</option>
-  </select>
-  <input type="text" id="mark" placeholder="目印（任意）" />
-  <button type="submit">登録</button>
-</form>
-
-<div class="btn-group">
-  <button onclick="openListTab('未取得')">📋 未取得リスト</button>
-  <button onclick="openListTab('取得済み')">📋 取得済みリスト</button>
-  <button onclick="exportCSV('未取得')">📁 未取得CSV</button>
-  <button onclick="exportCSV('取得済み')">📁 取得済みCSV</button>
-  <button onclick="cleanDuplicates()">🖊 重複座標を整理</button>
-</div>
-
-<div id="map"></div>
-
-<div>
-  <p>CSV形式: サーバー名, X, Y, レベル, 目印</p>
-  <textarea id="csvInput" placeholder="CSV形式で貼り付け"></textarea><br />
-  <button onclick="importCSV()">📥 CSVから一括登録</button>
-</div>
-
+    <form onsubmit="event.preventDefault(); registerCoordinate();">
+      <input type="number" id="x" placeholder="X座標" required />
+      <input type="number" id="y" placeholder="Y座標" required />
+      <input type="text" id="server" placeholder="サーバー名" required />
+      <select id="level">
+        <option value="1">Lv1</option>
+        <option value="2">Lv2</option>
+        <option value="3">Lv3</option>
+        <option value="4">Lv4</option>
+        <option value="5">Lv5</option>
+      </select>
+      <input type="text" id="mark" placeholder="目印（任意）" />
+      <button type="submit">登録</button>
+    </form>
+    <div class="btn-group">
+      <button onclick="cleanDuplicates()">🔁 重複整理</button>
+      <button onclick="exportCSV('未取得')">⬇ 未取得CSV出力</button>
+      <button onclick="exportCSV('取得済み')">⬇ 取得済みCSV出力</button>
+      <button onclick="openListTab('未取得')">📋 未取得リスト</button>
+      <button onclick="openListTab('取得済み')">📋 取得済みリスト</button>
+    </div>
+    <div id="map"></div>
+    <div>
+      <textarea id="csvInput" placeholder="CSV形式で貼り付け（サーバー名,X,Y,レベル,目印）"></textarea><br />
+      <button onclick="importCSV()">CSV一括登録</button>
+    </div>
   </div>  <script>
     function checkPassword() {
       const password = document.getElementById("passwordInput").value.trim();
@@ -108,51 +103,5 @@
         window.location.href = "https://www.google.com";
       }
     }
-
-    function openListTab(status) {
-      if (!window.coordinateData) {
-        alert("データを読み込み中です。もう一度お試しください。");
-        return;
-      }
-      const headers = ["サーバー名", "X", "Y", "レベル", "目印", "操作"];
-      let rows = [headers];
-      Object.entries(window.coordinateData).forEach(([key, d]) => {
-        if (d.取得状況 === status) {
-          const 操作 = `
-            <button onclick=\"window.changeStatus('${key}')\">✅切替</button>
-            <button onclick=\"window.deleteData('${key}')\">🗑削除</button>
-          `;
-          rows.push([d.サーバー名, d.X, d.Y, d.レベル, d.目印 || "", 操作]);
-        }
-      });
-      rows = [headers].concat(
-        rows.slice(1).sort((a, b) =>
-          a[3] - b[3] || a[0].localeCompare(b[0]) || a[1] - b[1] || a[2] - b[2]
-        )
-      );
-      const html = `
-        <html><head><meta charset="UTF-8">
-        <title>${status}リスト</title>
-        <style>
-          body { font-family: sans-serif; padding: 1em; }
-          table { border-collapse: collapse; width: 100%; }
-          th, td { border: 1px solid #aaa; padding: 4px; text-align: left; }
-          th { background: #eee; }
-          button { margin-right: 4px; }
-        </style></head><body><h2>${status}リスト</h2>
-    <table>
-      <thead><tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr></thead>
-      <tbody>
-        ${rows.slice(1).map(r => `<tr>${r.map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}
-      </tbody>
-    </table>
-    </body></html>
-  `;
-  const win = window.open("", "_blank");
-  win.document.write(html);
-  win.document.close();
-}
-
-  </script>
-</body>
+  </script></body>
 </html>
