@@ -114,11 +114,15 @@
         alert("データを読み込み中です。もう一度お試しください。");
         return;
       }
-      const headers = ["サーバー名", "X", "Y", "レベル", "目印"];
+      const headers = ["サーバー名", "X", "Y", "レベル", "目印", "操作"];
       let rows = [headers];
-      Object.values(window.coordinateData).forEach(d => {
+      Object.entries(window.coordinateData).forEach(([key, d]) => {
         if (d.取得状況 === status) {
-          rows.push([d.サーバー名, d.X, d.Y, d.レベル, d.目印 || ""]);
+          const 操作 = `
+            <button onclick=\"window.changeStatus('${key}')\">✅切替</button>
+            <button onclick=\"window.deleteData('${key}')\">🗑削除</button>
+          `;
+          rows.push([d.サーバー名, d.X, d.Y, d.レベル, d.目印 || "", 操作]);
         }
       });
       rows = [headers].concat(
@@ -134,6 +138,7 @@
           table { border-collapse: collapse; width: 100%; }
           th, td { border: 1px solid #aaa; padding: 4px; text-align: left; }
           th { background: #eee; }
+          button { margin-right: 4px; }
         </style></head><body><h2>${status}リスト</h2>
     <table>
       <thead><tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr></thead>
