@@ -1,101 +1,142 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>座標マップ</title>
+  <meta charset="UTF-8">
+  <title>座標マップアプリ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <style>
     body {
       font-family: sans-serif;
-      margin: 10px;
-      padding: 0;
+      margin: 0;
+      padding: 10px;
+      background: #f2f2f2;
     }
-    #map {
-      height: 80vh;
-      width: 100%;
-      margin-bottom: 10px;
-      background: #f9f9f9;
+    h2 {
+      text-align: center;
     }
-    form, textarea, button, select, input {
-      font-size: 16px;
-      margin: 5px 0;
-      width: 100%;
-      box-sizing: border-box;
+    .form-wrapper {
+      max-width: 400px;
+      margin: 0 auto 15px;
+      padding: 10px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
     label {
-      display: block;
-      margin-top: 10px;
       font-weight: bold;
     }
-    .btn-group {
+    input, select, button {
+      padding: 8px;
+      font-size: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      width: 100%;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    #map {
+      height: 65vh;
+      width: 100%;
+      max-width: 1000px;
+      margin: 0 auto;
+      background-color: #e6e6e6;
+    }
+    .buttons {
       display: flex;
       flex-wrap: wrap;
-      gap: 5px;
-      margin-top: 10px;
+      justify-content: center;
+      gap: 10px;
+      margin: 10px 0;
     }
-    .btn-group > button {
-      flex: 1;
-      min-width: 120px;
+    .buttons button {
+      font-size: 14px;
+      padding: 6px 10px;
     }
-    @media (min-width: 600px) {
-      .btn-group > button {
-        flex: none;
-      }
+    .csv-box {
+      max-width: 400px;
+      margin: 20px auto;
+    }
+    textarea {
+      width: 100%;
+      padding: 8px;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
 
+<!-- ✅ パスワード保護 -->
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const password = prompt("パスワードを入力してください");
-    if (password !== "hsyu986") {
-      location.href = "https://www.google.com";
-    }
-  });
+  const password = prompt("パスワードを入力してください:");
+  if (password !== "hsyu986") {
+    window.location.href = "https://www.google.com/";
+  }
 </script>
 
-<h2>座標登録マップ</h2>
+<h2>座標マップアプリ</h2>
 
-<div id="map"></div>
-
-<form id="coordinateForm">
-  <label>サーバー名</label>
-  <input type="text" name="サーバー名" required />
-
-  <label>X座標</label>
-  <input type="number" name="X" required />
-
-  <label>Y座標</label>
-  <input type="number" name="Y" required />
-
-  <label>レベル</label>
-  <select name="レベル" required>
-    <option value="1">1</option><option value="2">2</option><option value="3">3</option>
-    <option value="4">4</option><option value="5">5</option><option value="6">6</option>
-    <option value="7">7</option>
-  </select>
-
-  <label>目印</label>
-  <input type="text" name="目印" />
-
-  <button type="submit">✅ 登録</button>
-</form>
-
-<label for="csvInput">CSVから一括登録（サーバー名,X,Y,レベル,目印）</label>
-<textarea id="csvInput" rows="4" placeholder="例: 986,123,456,1,北東の塔"></textarea>
-<button onclick="importCSV()">📅 CSV登録</button>
-
-<div class="btn-group">
-  <button id="dedupeButton">♻️ 重複数数を整理</button>
-  <button id="toggleUnclaimed">📋 未取得リスト</button>
-  <button id="toggleClaimed">📋 取得済みリスト</button>
-  <button id="exportUnclaimedCSV">⬇️ 未取得CSV</button>
-  <button id="exportClaimedCSV">⬇️ 取得済みCSV</button>
+<!-- ✅ 入力フォーム 上部表示 -->
+<div class="form-wrapper">
+  <form id="coordinateForm">
+    <label>サーバー名
+      <input type="text" name="サーバー名" required>
+    </label>
+    <label>X座標
+      <input type="number" name="X" required>
+    </label>
+    <label>Y座標
+      <input type="number" name="Y" required>
+    </label>
+    <label>レベル
+      <select name="レベル" required>
+        <option value="1">Lv1</option>
+        <option value="2">Lv2</option>
+        <option value="3">Lv3</option>
+        <option value="4">Lv4</option>
+        <option value="5">Lv5</option>
+        <option value="6">Lv6</option>
+        <option value="7">Lv7</option>
+      </select>
+    </label>
+    <label>目印（任意）
+      <input type="text" name="目印">
+    </label>
+    <button type="submit">登録</button>
+  </form>
 </div>
 
+<!-- ✅ ボタン類 -->
+<div class="buttons">
+  <button id="toggleUnclaimed">📋 未取得リスト</button>
+  <button id="toggleClaimed">📋 取得済みリスト</button>
+  <button id="exportUnclaimedCSV">📄 未取得CSV</button>
+  <button id="exportClaimedCSV">📄 取得済みCSV</button>
+  <button id="dedupeButton">🧹 重複座標を整理</button>
+</div>
+
+<!-- ✅ CSV一括登録 -->
+<div class="csv-box">
+  <textarea id="csvInput" placeholder="サーバー名,X,Y,レベル,目印（任意）を一行ずつ入力" rows="4"></textarea><br>
+  <button onclick="importCSV()">📅 CSVから一括登録</button>
+</div>
+
+<!-- ✅ 地図 -->
+<div id="map"></div>
+
+<!-- ✅ Firebase＋Leaflet地図処理 -->
 <script type="module" src="scripts/map.js"></script>
 
 </body>
