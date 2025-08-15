@@ -1,4 +1,3 @@
-// ✅ map.js（完全版：削除・切替100%動作）
 import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
@@ -73,8 +72,8 @@ function drawMarkers() {
       (${data.X}, ${data.Y})<br>
       Lv: ${data.レベル}<br>
       ${data.目印 ? "目印: " + data.目印 + "<br>" : ""}
-      <button onclick=\"window.changeStatus('${key}')\">✅取得済みに</button>
-      <button onclick=\"window.deleteData('${key}')\">🗑削除</button>
+      <button onclick="window.changeStatus('${key}')">✅取得済みに</button>
+      <button onclick="window.deleteData('${key}')">🗑削除</button>
     `;
     marker.bindPopup(popup);
   });
@@ -83,7 +82,7 @@ function drawMarkers() {
 async function fetchData() {
   const snapshot = await get(dbRef);
   coordinateData = snapshot.exists() ? snapshot.val() : {};
-  window.coordinateData = coordinateData; // リスト用に公開
+  window.coordinateData = coordinateData;
   drawMarkers();
 }
 fetchData();
