@@ -6,101 +6,105 @@
   <title>986座標マップ</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script type="module" src="scripts/map.js"></script>
   <style>
-    body {
-      font-family: sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #f8f8f8;
-    }
-    h1 {
-      text-align: center;
-      background-color: #4682B4;
-      color: white;
-      margin: 0;
-      padding: 10px;
-    }
+    body { font-family: sans-serif; margin: 0; padding: 0; background: #f0f0f0; }
+    h1 { background: #4682B4; color: white; margin: 0; padding: 10px; text-align: center; }
     #formContainer {
-      background-color: #ffffff;
       padding: 10px;
+      background: white;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
     }
-    form input, form select, form textarea {
+    input, select, button, textarea {
+      font-size: 14px;
+      padding: 6px;
       width: 90%;
       max-width: 300px;
-      padding: 6px;
-      font-size: 14px;
     }
-    #map {
-      height: 80vh;
-      width: 100%;
-    }
-    button {
-      background-color: #00bfff;
-      color: white;
-      border: none;
-      padding: 6px 10px;
-      font-size: 14px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
+    #map { height: 70vh; width: 100%; }
     .button-row {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 5px;
-      margin-bottom: 10px;
+      gap: 6px;
+      margin: 10px;
     }
-    textarea {
-      resize: vertical;
-      width: 90%;
-      max-width: 500px;
+    button {
+      background: #00bfff;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #passwordScreen {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: white;
+      z-index: 9999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #passwordScreen input {
+      font-size: 18px;
+      padding: 10px;
+      width: 200px;
     }
   </style>
 </head>
 <body>
-  <script>
-    const pass = prompt("パスワードを入力してください");
-    if (pass !== "hsyu986") location.href = "https://www.google.com";
-  </script>
 
-  <h1>986座標マップ</h1>
+<div id="passwordScreen">
+  <input id="pw" type="password" placeholder="パスワードを入力">
+</div>
 
-  <div id="formContainer">
-    <form id="coordinateForm">
-      <input type="text" name="サーバー名" placeholder="サーバー名" required />
-      <input type="number" name="X" placeholder="X座標 (例: 123)" required />
-      <input type="number" name="Y" placeholder="Y座標 (例: 456)" required />
-      <select name="レベル" required>
-        <option value="">レベル選択</option>
-        <option value="1">1</option>
-        <option value="2">2</option>
-        <option value="3">3</option>
-        <option value="4">4</option>
-        <option value="5">5</option>
-        <option value="6">6</option>
-        <option value="7">7</option>
-      </select>
-      <input type="text" name="目印" placeholder="目印（任意）" />
-      <button type="submit">＋ 登録</button>
-    </form>
+<h1>986座標マップ</h1>
 
-    <textarea id="csvInput" rows="4" placeholder="CSV形式：サーバー名,X,Y,レベル,目印（任意）"></textarea>
-    <button onclick="importCSV()">📥 CSV一括登録</button>
+<div id="formContainer">
+  <form id="coordinateForm">
+    <input type="text" name="サーバー名" placeholder="サーバー名" required />
+    <input type="number" name="X" placeholder="X座標" required />
+    <input type="number" name="Y" placeholder="Y座標" required />
+    <select name="レベル" required>
+      <option value="">レベル選択</option>
+      <option value="1">1</option><option value="2">2</option>
+      <option value="3">3</option><option value="4">4</option>
+      <option value="5">5</option><option value="6">6</option>
+      <option value="7">7</option>
+    </select>
+    <input type="text" name="目印" placeholder="目印（任意）" />
+    <button type="submit">＋ 登録</button>
+  </form>
 
-    <div class="button-row">
-      <button id="toggleUnclaimed">📋 未取得リスト</button>
-      <button id="toggleClaimed">📋 取得済みリスト</button>
-      <button id="dedupeButton">🧹 重複整理</button>
-      <button id="exportUnclaimedCSV">⬇ 未取得CSV</button>
-      <button id="exportClaimedCSV">⬇ 取得済CSV</button>
-    </div>
+  <textarea id="csvInput" rows="4" placeholder="CSV形式：サーバー名,X,Y,レベル,目印"></textarea>
+  <button onclick="importCSV()">📥 CSV一括登録</button>
+
+  <div class="button-row">
+    <button onclick="openListTab('未取得')">📋 未取得リスト</button>
+    <button onclick="openListTab('取得済み')">📋 取得済みリスト</button>
+    <button onclick="exportCSV('未取得')">⬇ 未取得CSV</button>
+    <button onclick="exportCSV('取得済み')">⬇ 取得済みCSV</button>
+    <button onclick="dedupeCoordinates()">🧹 重複整理</button>
   </div>
+</div>
 
-  <div id="map"></div>
+<div id="map"></div>
+
+<script type="module" src="scripts/map.js"></script>
+<script>
+  document.getElementById("pw").addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      if (e.target.value === "hsyu986") {
+        document.getElementById("passwordScreen").style.display = "none";
+      } else {
+        location.href = "https://www.google.com";
+      }
+    }
+  });
+</script>
 </body>
 </html>
