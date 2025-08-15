@@ -123,6 +123,120 @@ document.getElementById("coordinateForm").addEventListener("submit", async e => 
   e.target.reset();
   loadMarkers();
 });
+// ✅ CSV一括登録機能
+window.importCSV = async function () {
+  const input = document.getElementById("csvInput").value.trim();
+  if (!input) return alert("CSVを入力してください");
+
+  const lines = input.split("\n");
+  let count = 0;
+
+  for (const line of lines) {
+    const [サーバー名, X, Y, レベル, 目印 = ""] = line.split(",");
+    if (!サーバー名 || !X || !Y || !レベル) continue;
+
+    await push(ref(db, "coordinates"), {
+      サーバー名,
+      X: parseInt(X),
+      Y: parseInt(Y),
+      レベル,
+      取得状況: "未取得",
+      目印
+    });
+    count++;
+  }
+  alert(`${count} 件登録しました`);
+  document.getElementById("csvInput").value = "";
+  loadMarkers();
+};
+
+// ✅ 重複座標整理機能（サーバー名+X+Yで重複チェック）
+document.getElementById("dedupeButton").addEventListener("click", async () => {
+  if (!confirm("重複を削除しますか？（最初の1件だけ残します）")) return;
+
+  const snap = await get(child(ref(db), "coordinates"));
+  if (!snap.exists()) return alert("データがありません");
+
+  const allData = snap.val();
+  const seen = {};
+  const toDelete = [];
+
+  for (const key in allData) {
+    const item = allData[key];
+    const id = `${item.サーバー名}_${item.X}_${item.Y}`;
+    if (seen[id]) {
+      toDelete.push(key);
+    } else {
+      seen[id] = true;
+    }
+  }
+
+  for (const key of toDelete) {
+    await remove(ref(db, `coordinates/${key}`));
+  }
+
+  alert(`重複 ${toDelete.length} 件を削除しました`);
+  loadMarkers();
+});
+
+// ✅ 未取得・取得済みリスト表示
+document.getElementById("toggleUnclaimed").addEventListener("click", () => openListTab("未取得"));
+document.getElementById("toggleClaimed").addEventListener("click", () => openListTab("取得済み"));
+
+function openListTab(status) {
+  const win = window.open("", "_blank");
+  const filtered = Object.entries(coordinatesData)
+    .filter(([, item]) => item.取得状況 === status)
+    .sort((a, b) => {
+      const lvA = parseInt(a[1].レベル), lvB = parseInt(b[1].レベル);
+      const svA = a[1].サーバー名, svB = b[1].サーバー名;
+      if (lvA !== lvB) return lvA - lvB;
+      if (svA !== svB) return svA.localeCompare(svB);
+      return a[1].X - b[1].X || a[1].Y - b[1].Y;
+    });
+
+  const rows = filtered.map(([key, item]) => `
+    <tr>
+      <td>${item.レベル}</td>
+      <td>${item.サーバー名}</td>
+      <td>${item.X}</td>
+      <td>${item.Y}</td>
+      <td>${item.目印 || ""}</td>
+      <td><button onclick="window.opener.deleteCoordinate('${key}')">🗑</button></td>
+      ${status === "未取得" ? `<td><button onclick="window.opener.setClaimed('${key}')">✅</button></td>` : ""}
+    </tr>
+  `).join("");
+
+  win.document.write(`
+    <html><head><meta charset="UTF-8"><title>${status}リスト</title></head><body>
+    <h2>${status}リスト</h2>
+    <table border="1" cellspacing="0" cellpadding="5">
+      <tr><th>Lv</th><th>サーバー</th><th>X</th><th>Y</th><th>目印</th><th>削除</th>${status === "未取得" ? "<th>取得</th>" : ""}</tr>
+      ${rows}
+    </table>
+    </body></html>
+  `);
+}
+
+// ✅ CSVエクスポート（UTF-8 BOM付き）
+function exportCSV(status) {
+  const filtered = Object.values(coordinatesData).filter(i => i.取得状況 === status);
+  const csv = filtered.map(i =>
+    [i.サーバー名, i.X, i.Y, i.レベル, i.目印 || ""].join(",")
+  );
+  const blob = new Blob(["\uFEFF" + csv.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${status}_list.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById("exportUnclaimedCSV").addEventListener("click", () => exportCSV("未取得"));
+document.getElementById("exportClaimedCSV").addEventListener("click", () => exportCSV("取得済み"));
+
 
 // 初期読み込み
 loadMarkers();
+
