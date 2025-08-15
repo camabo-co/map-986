@@ -2,59 +2,100 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>座標マップ</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>座標マップ</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <style>
-    body { font-family: sans-serif; margin: 0; padding: 0; text-align: center; }
-    #map { height: 800px; width: 100%; background-color: #f2f2f2; }
-    .controls { margin: 10px; }
-    textarea { width: 80%; height: 100px; }
+    body {
+      font-family: sans-serif;
+      margin: 10px;
+      padding: 0;
+    }
+    #map {
+      height: 80vh;
+      width: 100%;
+      margin-bottom: 10px;
+      background: #f9f9f9;
+    }
+    form, textarea, button, select, input {
+      font-size: 16px;
+      margin: 5px 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 10px;
+    }
+    .btn-group > button {
+      flex: 1;
+      min-width: 120px;
+    }
+    @media (min-width: 600px) {
+      .btn-group > button {
+        flex: none;
+      }
+    }
   </style>
 </head>
 <body>
 
 <script>
-  document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("DOMContentLoaded", function () {
     const password = prompt("パスワードを入力してください");
     if (password !== "hsyu986") {
-      alert("パスワードが違います");
-      window.location.href = "https://google.com"; // ⬅️ 間違えたらこのページへ
+      location.href = "https://www.google.com";
     }
   });
 </script>
 
-<h1>座標マップ</h1>
-
-<div class="controls">
-  <form id="coordinateForm">
-    <input name="サーバー名" placeholder="サーバー名" required />
-    <input name="X" type="number" placeholder="X座標" required />
-    <input name="Y" type="number" placeholder="Y座標" required />
-    <select name="レベル" required>
-      <option value="">レベル</option>
-      <option value="1">1</option>
-      <option value="2">2</option>
-      <option value="3">3</option>
-      <option value="4">4</option>
-      <option value="5">5</option>
-    </select>
-    <input name="目印" placeholder="目印" />
-    <button type="submit">登録</button>
-  </form>
-
-  <textarea id="csvInput" placeholder="CSV貼り付け（サーバー名,X,Y,レベル,目印）"></textarea><br>
-  <button onclick="importCSV()">📥 CSV一括登録</button>
-  <button id="dedupeButton">🧹 重複整理</button>
-  <button id="toggleUnclaimed">📋 未取得リスト</button>
-  <button id="toggleClaimed">📋 取得済みリスト</button>
-  <button id="exportUnclaimedCSV">📤 未取得CSV出力</button>
-  <button id="exportClaimedCSV">📤 取得済みCSV出力</button>
-</div>
+<h2>座標登録マップ</h2>
 
 <div id="map"></div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<form id="coordinateForm">
+  <label>サーバー名</label>
+  <input type="text" name="サーバー名" required />
+
+  <label>X座標</label>
+  <input type="number" name="X" required />
+
+  <label>Y座標</label>
+  <input type="number" name="Y" required />
+
+  <label>レベル</label>
+  <select name="レベル" required>
+    <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+    <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+    <option value="7">7</option>
+  </select>
+
+  <label>目印</label>
+  <input type="text" name="目印" />
+
+  <button type="submit">✅ 登録</button>
+</form>
+
+<label for="csvInput">CSVから一括登録（サーバー名,X,Y,レベル,目印）</label>
+<textarea id="csvInput" rows="4" placeholder="例: 986,123,456,1,北東の塔"></textarea>
+<button onclick="importCSV()">📥 CSV登録</button>
+
+<div class="btn-group">
+  <button id="dedupeButton">♻️ 重複整理</button>
+  <button id="toggleUnclaimed">📋 未取得リスト</button>
+  <button id="toggleClaimed">📋 取得済みリスト</button>
+  <button id="exportUnclaimedCSV">⬇️ 未取得CSV</button>
+  <button id="exportClaimedCSV">⬇️ 取得済みCSV</button>
+</div>
+
 <script type="module" src="scripts/map.js"></script>
 
 </body>
