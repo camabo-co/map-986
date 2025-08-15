@@ -14,12 +14,6 @@
       background-color: #f5f5f5;
       text-align: center;
     }
-
-    h1 {
-      margin-bottom: 0.5em;
-      font-size: 24px;
-    }
-
     #map {
       height: 600px;
       width: 100%;
@@ -27,43 +21,35 @@
       margin: 1em auto;
       border: 2px solid #ccc;
     }
-
     form, textarea, button, input, select {
       font-size: 14px;
       margin: 4px;
       padding: 6px;
     }
-
     textarea {
       width: 90%;
       height: 80px;
       margin-top: 10px;
     }
-
     .btn-group {
       margin-top: 15px;
     }
-
     .btn-group button {
       margin: 5px;
       padding: 8px 14px;
     }
-
     .hidden {
       display: none;
     }
-
     #authBox {
       padding-top: 100px;
     }
-
     #authBox input[type="password"] {
       padding: 10px;
       font-size: 16px;
       width: 220px;
       margin-bottom: 10px;
     }
-
     #authBox button {
       padding: 10px 20px;
       font-size: 16px;
@@ -71,7 +57,6 @@
   </style>
 </head>
 <body>
-  <!-- 🔐 パスワード認証画面 -->
   <div id="authBox">
     <h2>パスワードを入力してください</h2>
     <input type="password" id="passwordInput" placeholder="パスワード" />
@@ -79,12 +64,9 @@
     <button onclick="checkPassword()">認証</button>
   </div>
 
-  <!-- ✅ 認証後の本体 -->
   <div id="mainContent" class="hidden">
     <h1>座標マップ（未取得のみ表示）</h1>
     <div id="map"></div>
-
-    <!-- 📍 座標登録フォーム -->
     <form onsubmit="event.preventDefault(); registerCoordinate();">
       <input type="number" id="x" placeholder="X座標" required />
       <input type="number" id="y" placeholder="Y座標" required />
@@ -99,14 +81,10 @@
       <input type="text" id="mark" placeholder="目印（任意）" />
       <button type="submit">登録</button>
     </form>
-
-    <!-- 📥 CSV登録 -->
     <div>
       <textarea id="csvInput" placeholder="CSV形式で貼り付け（サーバー名,X,Y,レベル,目印）"></textarea><br />
       <button onclick="importCSV()">CSV一括登録</button>
     </div>
-
-    <!-- 🔧 操作ボタン群 -->
     <div class="btn-group">
       <button onclick="cleanDuplicates()">🔁 重複整理</button>
       <button onclick="exportCSV('未取得')">⬇ 未取得CSV出力</button>
@@ -116,21 +94,21 @@
     </div>
   </div>
 
-  <!-- ✅ Firebase連携 map.js 読み込み -->
-  <script type="module" src="scripts/map.js"></script>
-
-  <!-- ✅ パスワードチェック処理 -->
   <script>
     function checkPassword() {
       const password = document.getElementById("passwordInput").value.trim();
       if (password === "hsyu986") {
         document.getElementById("authBox").style.display = "none";
         document.getElementById("mainContent").classList.remove("hidden");
+
+        const script = document.createElement("script");
+        script.type = "module";
+        script.src = "scripts/map.js";
+        document.body.appendChild(script);
       } else {
         window.location.href = "https://www.google.com";
       }
     }
-
-    // 📋 リスト表示処理
-    window.openListTab = function (status) {
-      const headers = ["サーバー名", "X", "Y
+  </script>
+</body>
+</html>
