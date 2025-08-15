@@ -74,7 +74,7 @@
     #map {
       width: 100%;
       max-width: 1000px;
-      height: 600px;
+      height: 1000px;
       margin: 20px auto;
       background: #e0e0e0;
     }
@@ -90,9 +90,21 @@
 </head>
 <body>
 
+  <!-- ✅ パスワード入力 -->
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const pass = prompt("パスワードを入力してください");
+      if (pass !== "986map") {
+        alert("パスワードが間違っています");
+        location.href = "https://www.google.com/";
+      }
+    });
+  </script>
+
+  <!-- ✅ タイトル -->
   <h1>986座標マップ</h1>
 
-  <!-- 登録フォーム -->
+  <!-- ✅ 登録フォーム -->
   <form id="coordinateForm">
     <div id="form-area">
       <input type="text" name="サーバー名" placeholder="サーバー名" required />
@@ -112,7 +124,7 @@
     </div>
   </form>
 
-  <!-- 一覧・CSV・重複ボタン -->
+  <!-- ✅ 一覧・CSV・重複ボタン -->
   <div class="button-group">
     <button id="toggleUnclaimed">📋 未取得リスト</button>
     <button id="toggleClaimed">📋 取得済みリスト</button>
@@ -121,16 +133,28 @@
     <button id="dedupeButton">🧹 重複座標を整理</button>
   </div>
 
-  <!-- CSV入力 -->
+  <!-- ✅ CSV一括入力欄 -->
   <textarea id="csvInput" placeholder="CSV形式: サーバー名,X,Y,レベル,目印"></textarea>
   <div style="margin-top: 10px;">
     <button onclick="importCSV()">📥 CSVから一括登録</button>
   </div>
 
-  <!-- マップ -->
+  <!-- ✅ マップ -->
   <div id="map"></div>
 
-  <!-- JavaScript -->
+  <!-- ✅ Leaflet描画エラー対策 -->
+  <script>
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        if (window.map && window.map.invalidateSize) {
+          window.map.invalidateSize();
+        }
+      }, 300);
+    });
+  </script>
+
+  <!-- ✅ JavaScript（map.js連携） -->
   <script type="module" src="scripts/map.js"></script>
+
 </body>
 </html>
