@@ -1,11 +1,12 @@
-﻿
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <title>座標登録マップ</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- ✅ Leaflet 読み込み -->
   <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     body {
       font-family: "Arial", sans-serif;
@@ -117,6 +118,7 @@
 
 <div id="map"></div>
 
+<!-- ✅ map.js を最後に読み込み -->
 <script type="module" src="scripts/map.js"></script>
 </body>
 </html>
