@@ -73,12 +73,15 @@
   }
 
   function checkPassword() {
-    const pass = document.getElementById("passwordInput").value;
+    const input = document.getElementById("passwordInput");
+    const pass = input.value;
+
     if (pass === "hsyu986") {
       window.location.href = "main.html";
     } else {
-      alert("パスワードが違います");
-      window.location.href = "https://www.google.com/";
+      alert("パスワードが違います。もう一度試してください。");
+      input.value = "";
+      input.focus();
     }
   }
 </script>
