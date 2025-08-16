@@ -1,107 +1,87 @@
-<!DOCTYPE html><html lang="ja">
+<!DOCTYPE html>
+<html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <title>座標マップ</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <meta charset="UTF-8">
+  <title>パスワード認証</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
-      font-family: "Segoe UI", sans-serif;
+      font-family: "Arial", sans-serif;
+      background-color: #eee;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
       margin: 0;
-      padding: 1em;
-      background-color: #f5f5f5;
+    }
+    .login-box {
+      background: white;
+      padding: 20px 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
       text-align: center;
-    }
-    #map {
-      height: 600px;
+      max-width: 320px;
       width: 100%;
-      max-width: 1000px;
-      margin: 1em auto;
-      border: 2px solid #ccc;
     }
-    form, textarea, button, input, select {
-      font-size: 14px;
-      margin: 4px;
-      padding: 6px;
-    }
-    textarea {
-      width: 90%;
-      height: 80px;
-      margin-top: 10px;
-    }
-    .btn-group {
-      margin-top: 10px;
-    }
-    .btn-group button {
-      margin: 5px;
-      padding: 8px 14px;
-    }
-    .hidden {
-      display: none;
-    }
-    #authBox {
-      padding-top: 100px;
-    }
-    #authBox input[type="password"] {
-      padding: 10px;
+    input[type="password"],
+    input[type="text"] {
+      padding: 8px;
       font-size: 16px;
-      width: 220px;
-      margin-bottom: 10px;
+      width: 80%;
+      margin-top: 10px;
+      margin-bottom: 20px;
     }
-    #authBox button {
-      padding: 10px 20px;
+    .password-wrapper {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+    }
+    .eye-icon {
+      position: absolute;
+      top: 10px;
+      right: 35px;
+      cursor: pointer;
+      font-size: 18px;
+    }
+    button {
+      padding: 8px 20px;
       font-size: 16px;
+      cursor: pointer;
+      border-radius: 6px;
+      border: none;
+      background-color: #4CAF50;
+      color: white;
     }
   </style>
 </head>
 <body>
-  <div id="authBox">
-    <h2>パスワードを入力してください</h2>
-    <input type="password" id="passwordInput" placeholder="パスワード" />
-    <br />
-    <button onclick="checkPassword()">認証</button>
-  </div>  <div id="mainContent" class="hidden">
-    <form onsubmit="event.preventDefault(); registerCoordinate();">
-      <input type="number" id="x" placeholder="X座標" required />
-      <input type="number" id="y" placeholder="Y座標" required />
-      <input type="text" id="server" placeholder="サーバー名" required />
-      <select id="level">
-        <option value="1">Lv1</option>
-        <option value="2">Lv2</option>
-        <option value="3">Lv3</option>
-        <option value="4">Lv4</option>
-        <option value="5">Lv5</option>
-      </select>
-      <input type="text" id="mark" placeholder="目印（任意）" />
-      <button type="submit">登録</button>
-    </form>
-    <div class="btn-group">
-      <button onclick="cleanDuplicates()">🔁 重複整理</button>
-      <button onclick="exportCSV('未取得')">⬇ 未取得CSV出力</button>
-      <button onclick="exportCSV('取得済み')">⬇ 取得済みCSV出力</button>
-      <button onclick="openListTab('未取得')">📋 未取得リスト</button>
-      <button onclick="openListTab('取得済み')">📋 取得済みリスト</button>
-    </div>
-    <div id="map"></div>
-    <div>
-      <textarea id="csvInput" placeholder="CSV形式で貼り付け（サーバー名,X,Y,レベル,目印）"></textarea><br />
-      <button onclick="importCSV()">CSV一括登録</button>
-    </div>
-  </div>  <script>
-    function checkPassword() {
-      const password = document.getElementById("passwordInput").value.trim();
-      if (password === "hsyu986") {
-        document.getElementById("authBox").style.display = "none";
-        document.getElementById("mainContent").classList.remove("hidden");
 
-        const script = document.createElement("script");
-        script.type = "module";
-        script.src = "scripts/map.js";
-        document.body.appendChild(script);
-      } else {
-        window.location.href = "https://www.google.com";
-      }
+<div class="login-box">
+  <h2>パスワードを入力してください</h2>
+  <div class="password-wrapper">
+    <input type="password" id="passwordInput" placeholder="パスワード">
+    <span class="eye-icon" onclick="togglePassword()">👁️</span>
+  </div>
+  <br>
+  <button onclick="checkPassword()">OK</button>
+</div>
+
+<script>
+  function togglePassword() {
+    const input = document.getElementById("passwordInput");
+    input.type = input.type === "password" ? "text" : "password";
+  }
+
+  function checkPassword() {
+    const pass = document.getElementById("passwordInput").value;
+    if (pass === "hsyu986") {
+      window.location.href = "main.html";
+    } else {
+      alert("パスワードが違います");
+      window.location.href = "https://www.google.com/";
     }
-  </script></body>
+  }
+</script>
+
+</body>
 </html>
