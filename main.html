@@ -40,6 +40,22 @@
       padding: 4px;
       margin: 2px;
     }
+      html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  @media (max-width: 768px) {
+    #map {
+      height: calc(100vh - 200px); /* スマホ時：上のUIを引いた分だけ地図に */
+    }
+
+    button, input, select {
+      font-size: 14px;
+      margin: 4px;
+    }
+  }
+
   </style>
 </head>
 <body>
@@ -67,3 +83,4 @@
 
 </body>
 </html>
+
