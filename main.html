@@ -1,27 +1,28 @@
-﻿<!-- ✅ main.html - 完全動作版 -->
+﻿<!-- ✅ main.html - 完全動作版（type="module"修正済） -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <title>座標登録マップ</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- ✅ Leaflet CSS/JS 読み込み -->
+  <!-- ✅ Leaflet 読み込み -->
   <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: "Arial", sans-serif;
       background: #f7f7f7;
-      margin: 0;
       text-align: center;
+      margin: 0;
+      padding: 0;
     }
     .container {
-      background: #fff;
       max-width: 960px;
-      margin: 20px auto;
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+      margin: 10px auto;
+      padding: 10px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
     }
     form, .button-group {
       display: flex;
@@ -31,30 +32,42 @@
       margin: 10px 0;
     }
     input, select, button, textarea {
+      padding: 6px 10px;
       font-size: 14px;
-      padding: 6px;
-      border-radius: 5px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
     }
     textarea {
       width: 100%;
       min-height: 80px;
+      resize: vertical;
+    }
+    button {
+      cursor: pointer;
+      background-color: #e0e0e0;
+      transition: background-color 0.2s;
+    }
+    button:hover {
+      background-color: #d0d0d0;
     }
     .icon-button {
       display: flex;
       align-items: center;
-      background: #cce5ff;
+      gap: 5px;
+      background-color: #b3e5fc;
       border: none;
-      border-radius: 6px;
-      padding: 6px 10px;
-      cursor: pointer;
     }
-    .icon-button.danger { background: #ffcdd2; }
-    .icon-button.blue { background: #d1c4e9; }
+    .icon-button.danger {
+      background-color: #f8bbd0;
+    }
+    .icon-button.blue {
+      background-color: #c5cae9;
+    }
     #map {
       height: 700px;
       width: 100%;
-      border: 1px solid #ccc;
       margin-top: 15px;
+      border: 1px solid #ccc;
     }
   </style>
 </head>
@@ -95,7 +108,7 @@
 
 <div id="map"></div>
 
-<!-- ✅ 完全版の map.js 読み込み -->
-<script type="module" src="scripts/map.js"></script>
+<!-- ✅ map.js 読み込み（type="module" は外す） -->
+<script src="scripts/map.js"></script>
 </body>
 </html>
