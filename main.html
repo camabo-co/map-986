@@ -1,30 +1,28 @@
-﻿<!DOCTYPE html>
+﻿<!-- ✅ main.html - 完全動作版 -->
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <title>座標登録マップ</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- ✅ Leaflet 読み込み -->
+  <!-- ✅ Leaflet CSS/JS 読み込み -->
   <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     body {
-      font-family: "Arial", sans-serif;
+      font-family: Arial, sans-serif;
       background: #f7f7f7;
-      text-align: center;
       margin: 0;
-      padding: 0;
+      text-align: center;
     }
-
     .container {
+      background: #fff;
       max-width: 960px;
-      margin: 10px auto;
-      padding: 10px;
-      background: #ffffff;
-      border-radius: 12px;
-      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+      margin: 20px auto;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.2);
     }
-
     form, .button-group {
       display: flex;
       flex-wrap: wrap;
@@ -32,56 +30,35 @@
       gap: 10px;
       margin: 10px 0;
     }
-
     input, select, button, textarea {
-      padding: 6px 10px;
       font-size: 14px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
+      padding: 6px;
+      border-radius: 5px;
     }
-
     textarea {
       width: 100%;
       min-height: 80px;
-      resize: vertical;
     }
-
-    button {
-      cursor: pointer;
-      background-color: #e0e0e0;
-      transition: background-color 0.2s;
-    }
-
-    button:hover {
-      background-color: #d0d0d0;
-    }
-
     .icon-button {
       display: flex;
       align-items: center;
-      gap: 5px;
-      background-color: #b3e5fc;
+      background: #cce5ff;
       border: none;
+      border-radius: 6px;
+      padding: 6px 10px;
+      cursor: pointer;
     }
-
-    .icon-button.danger {
-      background-color: #f8bbd0;
-    }
-
-    .icon-button.blue {
-      background-color: #c5cae9;
-    }
-
+    .icon-button.danger { background: #ffcdd2; }
+    .icon-button.blue { background: #d1c4e9; }
     #map {
       height: 700px;
       width: 100%;
-      margin-top: 15px;
       border: 1px solid #ccc;
+      margin-top: 15px;
     }
   </style>
 </head>
 <body>
-
 <div class="container">
   <form id="registerForm">
     <input type="text" id="server" placeholder="サーバー名" required>
@@ -102,11 +79,11 @@
   </form>
 
   <div class="button-group">
-    <button class="icon-button blue" onclick="openListTab('未取得')">📋 未取得リスト</button>
-    <button class="icon-button blue" onclick="openListTab('取得済み')">📋 取得済みリスト</button>
-    <button class="icon-button" onclick="downloadCSV('未取得')">📁 未取得CSV</button>
-    <button class="icon-button" onclick="downloadCSV('取得済み')">📁 取得済みCSV</button>
-    <button class="icon-button danger" onclick="cleanDuplicates()">✏️ 重複座標を整理</button>
+    <button class="icon-button blue" onclick="window.openListTab('未取得')">📋 未取得リスト</button>
+    <button class="icon-button blue" onclick="window.openListTab('取得済み')">📋 取得済みリスト</button>
+    <button class="icon-button" onclick="window.downloadCSV('未取得')">📁 未取得CSV</button>
+    <button class="icon-button" onclick="window.downloadCSV('取得済み')">📁 取得済みCSV</button>
+    <button class="icon-button danger" onclick="window.cleanDuplicates()">✏️ 重複座標を整理</button>
   </div>
 
   <form id="csvForm">
@@ -118,7 +95,7 @@
 
 <div id="map"></div>
 
-<!-- ✅ map.js を最後に読み込み -->
+<!-- ✅ 完全版の map.js 読み込み -->
 <script type="module" src="scripts/map.js"></script>
 </body>
 </html>
