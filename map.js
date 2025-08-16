@@ -1,10 +1,17 @@
-// ✅ Firebase + Leaflet 初期化
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 import {
-  getDatabase, ref, push, get, set, update, remove, onValue
+  initializeApp
+} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+import {
+  getDatabase,
+  ref,
+  push,
+  get,
+  child,
+  update,
+  remove
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
-// Firebase設定
+// Firebase初期化
 const firebaseConfig = {
   apiKey: "AIzaSyDdNI04D1xhQihN3DBDdF1_YAp6XRcErDw",
   authDomain: "maps3-986-ffbbd.firebaseapp.com",
@@ -14,20 +21,18 @@ const firebaseConfig = {
   messagingSenderId: "701191378459",
   appId: "1:701191378459:web:d2cf8d869f5"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-const dataRef = ref(db, "coordinates");
 
-// 地図表示（1000×1000グリッド）
+// マップ初期化
 const map = L.map("map", {
-  crs: L.CRS.Simple,
-  minZoom: -2,
+  minZoom: 0,
   maxZoom: 4,
   zoomSnap: 1
-});
+}).setView([500, 500], 0);
 const bounds = [[0, 0], [1000, 1000]];
-map.fitBounds(bounds);
+L.rectangle(bounds, { color: "#999", weight: 1, fillOpacity: 0 }).addTo(map);
+map.setMaxBounds(bounds);
 
 // グリッド描画
 for (let i = 0; i <= 1000; i += 100) {
@@ -35,190 +40,178 @@ for (let i = 0; i <= 1000; i += 100) {
   L.polyline([[i, 0], [i, 1000]], { color: "#ccc", weight: 1 }).addTo(map);
 }
 
-// レベルごとの色
-const levelColors = {
-  1: "blue", 2: "green", 3: "orange",
-  4: "red", 5: "purple", 6: "brown", 7: "black"
-};
-
-// Firebaseのデータを読み込み → 未取得だけ表示
-onValue(dataRef, (snapshot) => {
-  map.eachLayer(layer => {
-    if (layer instanceof L.CircleMarker) map.removeLayer(layer);
-  });
-
-  snapshot.forEach(childSnapshot => {
-    const data = childSnapshot.val();
-    const key = childSnapshot.key;
-    if (data.取得状況 === "未取得") {
-      createMarker(data, key);
-    }
-  });
-});
-
-// マーカー作成関数
-function createMarker(data, key) {
-  const { サーバー名, X, Y, レベル, 目印 } = data;
-  const color = levelColors[レベル] || "gray";
-
-  const marker = L.circleMarker([Y, X], {
-    radius: 8,
-    color: color,
-    fillColor: color,
-    fillOpacity: 0.8
-  }).addTo(map);
-
-  marker.bindPopup(`
-    <b>サーバー:</b> ${サーバー名}<br>
-    <b>X:</b> ${X} / <b>Y:</b> ${Y}<br>
-    <b>レベル:</b> ${レベル}<br>
-    <b>目印:</b> ${目印 || ""}<br><br>
-    <button onclick="toggleStatus('${key}')">✅ 取得済みにする</button><br>
-    <button onclick="deleteEntry('${key}')">🗑️ 削除</button>
-  `);
+// レベルに応じたマーカー色
+function getColor(level) {
+  const colors = {
+    1: "blue", 2: "green", 3: "orange",
+    4: "purple", 5: "red", 6: "black", 7: "brown"
+  };
+  return colors[level] || "gray";
 }
 
-// 取得状況を切り替える（未取得 ⇄ 取得済み）
+// 表示
+function displayMarkers() {
+  get(child(ref(db), "coordinates")).then(snapshot => {
+    if (snapshot.exists()) {
+      map.eachLayer(layer => {
+        if (layer instanceof L.CircleMarker) map.removeLayer(layer);
+      });
+
+      Object.entries(snapshot.val()).forEach(([key, val]) => {
+        if (val.取得状況 === "未取得") {
+          const marker = L.circleMarker([val.Y, val.X], {
+            radius: 8,
+            color: getColor(val.レベル),
+            fillOpacity: 0.8
+          }).addTo(map);
+          marker.bindPopup(`
+            <b>サーバー名:</b> ${val.サーバー名}<br/>
+            <b>X:</b> ${val.X} / <b>Y:</b> ${val.Y}<br/>
+            <b>レベル:</b> ${val.レベル}<br/>
+            <b>目印:</b> ${val.目印 || ""}<br/>
+            <button onclick="window.toggleStatus('${key}')">✅ 取得済みにする</button><br/>
+            <button onclick="window.deleteEntry('${key}')">🗑️ 削除</button>
+          `);
+        }
+      });
+    }
+  });
+}
+displayMarkers();
+
+// 登録処理
+document.getElementById("csvForm")?.addEventListener("submit", e => {
+  e.preventDefault();
+  const lines = document.getElementById("csvInput").value.trim().split("\n");
+  lines.forEach(line => {
+    const [サーバー名, X, Y, レベル, 目印] = line.split(",");
+    if (サーバー名 && X && Y && レベル) {
+      const newItem = {
+        サーバー名: サーバー名.trim(),
+        X: Number(X),
+        Y: Number(Y),
+        レベル: Number(レベル),
+        目印: (目印 || "").trim(),
+        取得状況: "未取得"
+      };
+      const coordRef = ref(db, "coordinates");
+      get(coordRef).then(snapshot => {
+        let found = false;
+        snapshot.forEach(child => {
+          const val = child.val();
+          if (val.X === newItem.X && val.Y === newItem.Y) {
+            update(ref(db, `coordinates/${child.key}`), newItem);
+            found = true;
+          }
+        });
+        if (!found) push(coordRef, newItem);
+        displayMarkers();
+      });
+    }
+  });
+  document.getElementById("csvInput").value = "";
+});
+
+// ステータス切替
 window.toggleStatus = function (key) {
   const itemRef = ref(db, `coordinates/${key}`);
   get(itemRef).then(snapshot => {
     if (snapshot.exists()) {
-      const currentStatus = snapshot.val().取得状況;
-      const newStatus = currentStatus === "未取得" ? "取得済み" : "未取得";
-      update(itemRef, { 取得状況: newStatus }).then(() => {
-        alert(`「${newStatus}」に変更しました。`);
-      });
+      const current = snapshot.val().取得状況;
+      const next = current === "未取得" ? "取得済み" : "未取得";
+      update(itemRef, { 取得状況: next }).then(displayMarkers);
     }
   });
 };
 
-// データを削除する
+// 削除
 window.deleteEntry = function (key) {
   if (confirm("本当に削除しますか？")) {
-    const itemRef = ref(db, `coordinates/${key}`);
-    remove(itemRef).then(() => {
-      alert("削除しました。");
-    });
+    remove(ref(db, `coordinates/${key}`)).then(displayMarkers);
   }
 };
 
-// CSVダウンロード
-window.downloadCSV = function (status) {
-  get(dataRef).then(snapshot => {
-    let csv = "サーバー名,X,Y,レベル,取得状況,目印\n";
-    snapshot.forEach(childSnapshot => {
-      const data = childSnapshot.val();
-      if (data.取得状況 === status) {
-        csv += `${data.サーバー名},${data.X},${data.Y},${data.レベル},${data.取得状況},${data.目印 || ""}\n`;
+// 重複整理
+window.cleanDuplicates = function () {
+  get(child(ref(db), "coordinates")).then(snapshot => {
+    const coords = {};
+    snapshot.forEach(child => {
+      const val = child.val();
+      const key = `${val.X}_${val.Y}`;
+      if (!coords[key]) {
+        coords[key] = { key: child.key, val };
+      } else {
+        remove(ref(db, `coordinates/${child.key}`));
+      }
+    });
+    alert("重複整理を完了しました。");
+    displayMarkers();
+  });
+};
+
+// CSV出力
+window.downloadCSV = function (filter) {
+  get(child(ref(db), "coordinates")).then(snapshot => {
+    if (!snapshot.exists()) return;
+
+    const rows = [["サーバー名", "X", "Y", "レベル", "目印"]];
+    snapshot.forEach(child => {
+      const val = child.val();
+      if (val.取得状況 === filter) {
+        rows.push([val.サーバー名, val.X, val.Y, val.レベル, val.目印 || ""]);
       }
     });
 
-    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${status}_リスト.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const csv = "\uFEFF" + rows.map(r => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${filter}_list.csv`;
+    a.click();
   });
 };
 
-// CSV一括登録
-window.bulkRegisterFromCSV = function () {
-  const input = document.getElementById("csvInput").value;
-  const rows = input.split(/\r?\n/);
-
-  rows.forEach(line => {
-    const [サーバー名, X, Y, レベル, 目印] = line.split(",").map(v => v.trim());
-    if (!サーバー名 || !X || !Y || !レベル) return;
-
-    const entry = {
-      サーバー名,
-      X: Number(X),
-      Y: Number(Y),
-      レベル: Number(レベル),
-      取得状況: "未取得",
-      目印: 目印 || ""
-    };
-
-    push(dataRef, entry);
-  });
-
-  alert("CSVからの登録が完了しました。");
-};
-// ✅ 未取得／取得済みリストを別タブで表示
+// リスト表示
 window.openListTab = function (status) {
-  get(dataRef).then(snapshot => {
-    const entries = [];
+  get(child(ref(db), "coordinates")).then(snapshot => {
+    if (!snapshot.exists()) return;
+
+    const data = [];
     snapshot.forEach(child => {
       const val = child.val();
       if (val.取得状況 === status) {
-        entries.push({ key: child.key, ...val });
+        data.push({ ...val, key: child.key });
       }
     });
 
-    // 並び替え：レベル → サーバー名 → X → Y
-    entries.sort((a, b) => {
-      return a.レベル - b.レベル || a.サーバー名.localeCompare(b.サーバー名) || a.X - b.X || a.Y - b.Y;
-    });
+    data.sort((a, b) =>
+      a.レベル - b.レベル ||
+      a.サーバー名.localeCompare(b.サーバー名) ||
+      a.X - b.X ||
+      a.Y - b.Y
+    );
 
-    const newWin = window.open("", "_blank");
-    const doc = newWin.document;
-    doc.write("<!DOCTYPE html><html><head><meta charset='UTF-8'><title>リスト</title>");
-    doc.write("<style>body{font-family:sans-serif;}table{border-collapse:collapse;width:100%;}th,td{border:1px solid #ccc;padding:4px;}button{margin:2px;}</style>");
-    doc.write("</head><body>");
-    doc.write(`<h2>${status}リスト</h2>`);
-    doc.write("<table><thead><tr><th>レベル</th><th>サーバー名</th><th>X</th><th>Y</th><th>目印</th><th>操作</th></tr></thead><tbody>");
-
-    entries.forEach(entry => {
-      doc.write(`<tr>
-        <td>${entry.レベル}</td>
-        <td>${entry.サーバー名}</td>
-        <td>${entry.X}</td>
-        <td>${entry.Y}</td>
-        <td>${entry.目印 || ""}</td>
-        <td>
-          <button onclick="window.opener.toggleStatus('${entry.key}')">${status === "未取得" ? "取得済みにする" : "未取得に戻す"}</button>
-          <button onclick="window.opener.deleteEntry('${entry.key}')">削除</button>
-        </td>
-      </tr>`);
-    });
-
-    doc.write("</tbody></table>");
-    doc.write("</body></html>");
-    doc.close();
+    const html = `
+      <html lang="ja"><head><meta charset="UTF-8"><title>${status}リスト</title>
+      <style>
+        body { font-family: sans-serif; padding: 10px; }
+        h2 { color: ${status === "未取得" ? "#2c3e50" : "#8e44ad"}; }
+        button { margin-left: 5px; }
+      </style></head><body>
+      <h2>📋 ${status}リスト</h2><ul>
+      ${data.map(d => `
+        <li>
+          Lv${d.レベル} / ${d.サーバー名} / X:${d.X} / Y:${d.Y} / ${d.目印 || ""}
+          <button onclick="window.opener.toggleStatus('${d.key}')">
+            ${status === "未取得" ? "✅取得済みに" : "↩未取得に戻す"}
+          </button>
+          <button onclick="window.opener.deleteEntry('${d.key}')">🗑️削除</button>
+        </li>
+      `).join("")}
+      </ul></body></html>
+    `;
+    const win = window.open("", "_blank");
+    win.document.write(html);
+    win.document.close();
   });
 };
-
-// ✅ 同じX,Yの座標は1つだけ残す
-window.cleanDuplicates = function () {
-  get(dataRef).then(snapshot => {
-    const seen = {};
-    const toDelete = [];
-
-    snapshot.forEach(child => {
-      const data = child.val();
-      const key = child.key;
-      const coordKey = `${data.X}-${data.Y}`;
-      if (seen[coordKey]) {
-        toDelete.push(key);
-      } else {
-        seen[coordKey] = true;
-      }
-    });
-
-    if (toDelete.length === 0) {
-      alert("重複はありません。");
-      return;
-    }
-
-    if (confirm(`${toDelete.length} 件の重複を削除しますか？`)) {
-      toDelete.forEach(key => {
-        remove(ref(db, `coordinates/${key}`));
-      });
-      alert("重複を削除しました。");
-    }
-  });
-};
-
