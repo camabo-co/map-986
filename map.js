@@ -1,4 +1,3 @@
-// ✅ Firebase初期化（各自の設定に変更してください）
 import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
@@ -6,14 +5,14 @@ import {
 import {
   getDatabase,
   ref,
-  set,
   push,
   get,
+  child,
   update,
-  remove,
-  onValue
+  remove
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
+// ✅ Firebase初期化
 const firebaseConfig = {
   apiKey: "AIzaSyDdNI04D1xhQihN3DBDdF1_YAp6XRcErDw",
   authDomain: "maps3-986-ffbbd.firebaseapp.com",
@@ -21,204 +20,208 @@ const firebaseConfig = {
   projectId: "maps3-986-ffbbd",
   storageBucket: "maps3-986-ffbbd.appspot.com",
   messagingSenderId: "701191378459",
-  appId: "1:701191378459:web:d2cf8d869f5"
+  appId: "1:701191378459:web:d2cf8d869f5cba869d0abe"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-const coordsRef = ref(db, "coordinates");
 
-// ✅ Leafletマップ初期化（グリッド背景付き）
+// ✅ Leafletマップ初期化
 const map = L.map("map", {
   crs: L.CRS.Simple,
   minZoom: -2,
-  maxZoom: 2,
-}).setView([500, 500], 0);
+  maxZoom: 4,
+  zoomSnap: 0.1,
+  zoomDelta: 0.5
+});
 
 const bounds = [[0, 0], [1000, 1000]];
-L.rectangle(bounds, { color: "#999", weight: 1, fill: false }).addTo(map);
+L.rectangle(bounds, { color: "#ccc", weight: 1 }).addTo(map);
+map.fitBounds(bounds);
+map.setView([500, 500], 0);
 
-const gridSpacing = 100;
-for (let i = gridSpacing; i < 1000; i += gridSpacing) {
-  L.polyline([[0, i], [1000, i]], { color: "#ccc", weight: 1 }).addTo(map); // 縦線
-  L.polyline([[i, 0], [i, 1000]], { color: "#ccc", weight: 1 }).addTo(map); // 横線
+// グリッド線追加
+for (let i = 0; i <= 1000; i += 50) {
+  L.polyline([[0, i], [1000, i]], { color: "#ddd", weight: 1 }).addTo(map);
+  L.polyline([[i, 0], [i, 1000]], { color: "#ddd", weight: 1 }).addTo(map);
 }
 
-// ✅ レベル別マーカー色
-function getMarkerColor(level) {
-  switch (parseInt(level)) {
-    case 1: return "blue";
-    case 2: return "green";
-    case 3: return "orange";
-    case 4: return "red";
-    default: return "gray";
-  }
-}
-
-// ✅ マーカー管理
 let markers = {};
-function renderMarkers(data) {
-  Object.values(markers).forEach(m => map.removeLayer(m));
+let coordinatesData = {};
+
+window.loadMarkers = async function () {
+  Object.values(markers).forEach(marker => map.removeLayer(marker));
   markers = {};
 
-  data.forEach(item => {
-    if (item.取得状況 !== "未取得") return;
+  const snap = await get(child(ref(db), "coordinates"));
+  if (!snap.exists()) return;
 
-    const key = `${item.サーバー名}_${item.X}_${item.Y}`;
+  coordinatesData = snap.val();
+
+  for (const key in coordinatesData) {
+    const item = coordinatesData[key];
+    if (item.取得状況 !== "未取得") continue;
+
+    const color = getMarkerColor(item.レベル);
     const marker = L.circleMarker([item.Y, item.X], {
       radius: 6,
-      color: getMarkerColor(item.レベル),
+      color: color,
       fillOpacity: 0.8
     }).addTo(map);
 
     marker.bindPopup(`
-      <b>${item.サーバー名}</b><br/>
-      (${item.X}, ${item.Y})<br/>
-      レベル: ${item.レベル}<br/>
-      ${item.目印 || ""}<br/>
-      <button onclick="changeStatus('${key}', '取得済み')">取得済みにする</button><br/>
-      <button onclick="deleteEntry('${key}')">削除</button>
+      <b>サーバー名:</b> ${item.サーバー名}<br>
+      <b>X:</b> ${item.X}<br>
+      <b>Y:</b> ${item.Y}<br>
+      <b>レベル:</b> ${item.レベル}<br>
+      <b>目印:</b> ${item.目印 || ""}<br>
+      <button onclick="setClaimed('${key}')">✅ 取得済みにする</button>
+      <button onclick="deleteCoordinate('${key}')">🗑 削除</button>
     `);
+
     markers[key] = marker;
-  });
-}
-
-// ✅ データ取得して描画
-function fetchAndRender() {
-  get(coordsRef).then(snapshot => {
-    if (snapshot.exists()) {
-      const allData = Object.values(snapshot.val());
-      renderMarkers(allData);
-      window.allCoordinates = allData;
-    }
-  });
-}
-fetchAndRender();
-onValue(coordsRef, () => fetchAndRender());
-
-// ✅ ステータス切り替え
-window.changeStatus = function (key, status) {
-  const [server, x, y] = key.split("_");
-  get(coordsRef).then(snapshot => {
-    if (!snapshot.exists()) return;
-    const entries = Object.entries(snapshot.val());
-    const match = entries.find(([id, item]) =>
-      item.サーバー名 == server && item.X == x && item.Y == y
-    );
-    if (match) {
-      const [id] = match;
-      update(ref(db, `coordinates/${id}`), { 取得状況: status }).then(() => {
-        alert("状態を更新しました");
-      });
-    }
-  });
+  }
 };
 
-// ✅ 削除処理
-window.deleteEntry = function (key) {
-  if (!confirm("本当に削除しますか？")) return;
-  const [server, x, y] = key.split("_");
-  get(coordsRef).then(snapshot => {
-    if (!snapshot.exists()) return;
-    const entries = Object.entries(snapshot.val());
-    const match = entries.find(([id, item]) =>
-      item.サーバー名 == server && item.X == x && item.Y == y
-    );
-    if (match) {
-      const [id] = match;
-      remove(ref(db, `coordinates/${id}`)).then(() => {
-        alert("削除しました");
-      });
-    }
-  });
+function getMarkerColor(level) {
+  const colors = {
+    1: "blue",
+    2: "green",
+    3: "orange",
+    4: "red",
+    5: "purple",
+    6: "brown",
+    7: "black"
+  };
+  return colors[level] || "gray";
+}
+
+// ✅ 取得済みにする
+window.setClaimed = async function (key) {
+  await update(ref(db, `coordinates/${key}`), { 取得状況: "取得済み" });
+  alert("取得済みに変更しました");
+  loadMarkers();
 };
 
-// ✅ 重複整理
-window.cleanDuplicates = function () {
-  get(coordsRef).then(snapshot => {
-    if (!snapshot.exists()) return;
+// ✅ 未取得に戻す
+window.setUnclaimed = async function (key) {
+  await update(ref(db, `coordinates/${key}`), { 取得状況: "未取得" });
+  alert("未取得に戻しました");
+  loadMarkers();
+};
 
-    const entries = Object.entries(snapshot.val());
-    const seen = new Map();
-    const toDelete = [];
+// ✅ 削除
+window.deleteCoordinate = async function (key) {
+  if (!confirm("この座標を削除しますか？")) return;
+  await remove(ref(db, `coordinates/${key}`));
+  alert("削除しました");
+  loadMarkers();
+};
 
-    entries.forEach(([id, item]) => {
-      const key = `${item.サーバー名}_${item.X}_${item.Y}`;
-      if (seen.has(key)) {
-        toDelete.push(id);
-      } else {
-        seen.set(key, id);
-      }
+// ✅ 一括登録（CSV）
+document.getElementById("csvForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const text = document.getElementById("csvInput").value.trim();
+  const lines = text.split("\n");
+
+  for (const line of lines) {
+    const [サーバー名, X, Y, レベル, 目印 = ""] = line.split(",");
+    if (!サーバー名 || !X || !Y || !レベル) continue;
+
+    const duplicate = Object.values(coordinatesData).find(d =>
+      d.X == X && d.Y == Y && d.サーバー名 == サーバー名
+    );
+
+    if (duplicate) {
+      await update(ref(db, `coordinates/${duplicate.key}`), {
+        取得状況: "未取得",
+        レベル,
+        目印
+      });
+    } else {
+      await push(ref(db, "coordinates"), {
+        サーバー名, X, Y, レベル, 目印, 取得状況: "未取得"
+      });
+    }
+  }
+
+  alert("一括登録が完了しました");
+  document.getElementById("csvInput").value = "";
+  loadMarkers();
+});
+
+// ✅ リストを開く（別タブ）
+window.openListTab = function (status) {
+  const filtered = Object.entries(coordinatesData)
+    .filter(([_, d]) => d.取得状況 === status)
+    .sort((a, b) => {
+      const A = a[1], B = b[1];
+      return A.レベル - B.レベル || A.サーバー名 - B.サーバー名 || A.X - B.X || A.Y - B.Y;
     });
 
-    toDelete.forEach(id => remove(ref(db, `coordinates/${id}`)));
-    alert("重複を整理しました");
-  });
+  const win = window.open();
+  win.document.write(`
+    <html><head><meta charset="UTF-8"><title>${status}リスト</title>
+    <style>
+      body { font-family: sans-serif; padding: 20px; }
+      table { border-collapse: collapse; width: 100%; }
+      th, td { border: 1px solid #999; padding: 4px; text-align: center; }
+      button { font-size: 12px; padding: 4px 8px; }
+    </style>
+    </head><body>
+    <h2>📋 ${status}リスト</h2>
+    <table>
+      <tr><th>Lv</th><th>サーバー</th><th>X</th><th>Y</th><th>目印</th><th>削除</th><th>${status === "未取得" ? "取得" : "未取得へ"}</th></tr>
+      ${filtered.map(([key, d]) => `
+        <tr>
+          <td>${d.レベル}</td><td>${d.サーバー名}</td><td>${d.X}</td><td>${d.Y}</td><td>${d.目印 || ""}</td>
+          <td><button onclick="window.opener.deleteCoordinate('${key}'); window.location.reload()">🗑</button></td>
+          <td><button onclick="window.opener.${status === "未取得" ? "setClaimed" : "setUnclaimed"}('${key}'); window.location.reload()">✅</button></td>
+        </tr>
+      `).join("")}
+    </table>
+    </body></html>
+  `);
 };
 
 // ✅ CSV出力
 window.downloadCSV = function (status) {
-  const rows = [["サーバー名", "X", "Y", "レベル", "目印", "取得状況"]];
-  window.allCoordinates.forEach(item => {
-    if (item.取得状況 === status) {
-      rows.push([item.サーバー名, item.X, item.Y, item.レベル, item.目印 || "", item.取得状況]);
+  const rows = [["サーバー名", "X", "Y", "レベル", "目印"]];
+  for (const d of Object.values(coordinatesData)) {
+    if (d.取得状況 === status) {
+      rows.push([d.サーバー名, d.X, d.Y, d.レベル, d.目印 || ""]);
     }
-  });
+  }
 
-  const csv = rows.map(r => r.join(",")).join("\n");
-  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const csvContent = "\uFEFF" + rows.map(e => e.join(",")).join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
+
   const a = document.createElement("a");
   a.href = url;
   a.download = `${status}_list.csv`;
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
 };
 
-// ✅ リスト表示（別タブ）
-window.openListTab = function (status) {
-  const filtered = window.allCoordinates.filter(item => item.取得状況 === status);
-  filtered.sort((a, b) => a.レベル - b.レベル || a.サーバー名 - b.サーバー名 || a.X - b.X || a.Y - b.Y);
+// ✅ 重複整理
+window.cleanDuplicates = async function () {
+  const all = Object.entries(coordinatesData);
+  const seen = new Map();
 
-  const html = `
-    <html><head><meta charset="UTF-8"><title>${status}リスト</title></head><body>
-    <h2>${status}リスト</h2>
-    <table border="1" style="border-collapse: collapse;">
-      <tr><th>レベル</th><th>サーバー名</th><th>X</th><th>Y</th><th>目印</th><th>操作</th></tr>
-      ${filtered.map(item => `
-        <tr>
-          <td>${item.レベル}</td>
-          <td>${item.サーバー名}</td>
-          <td>${item.X}</td>
-          <td>${item.Y}</td>
-          <td>${item.目印 || ""}</td>
-          <td>
-            <button onclick="window.opener.changeStatus('${item.サーバー名}_${item.X}_${item.Y}', '${status === '未取得' ? '取得済み' : '未取得'}')">状態変更</button>
-            <button onclick="window.opener.deleteEntry('${item.サーバー名}_${item.X}_${item.Y}')">削除</button>
-          </td>
-        </tr>
-      `).join("")}
-    </table></body></html>
-  `;
-  const win = window.open();
-  win.document.write(html);
-  win.document.close();
+  for (const [key, d] of all) {
+    const id = `${d.サーバー名}_${d.X}_${d.Y}`;
+    if (seen.has(id)) {
+      await remove(ref(db, `coordinates/${key}`));
+    } else {
+      seen.set(id, key);
+    }
+  }
+
+  alert("重複整理が完了しました");
+  loadMarkers();
 };
 
-// ✅ CSVから一括登録
-document.getElementById("csvForm").addEventListener("submit", function (e) {
-  e.preventDefault();
-  const lines = document.getElementById("csvInput").value.trim().split("\n");
-  lines.forEach(line => {
-    const [server, x, y, level, marker] = line.split(",");
-    if (!server || !x || !y || !level) return;
-    push(coordsRef, {
-      サーバー名: server.trim(),
-      X: Number(x),
-      Y: Number(y),
-      レベル: Number(level),
-      目印: marker?.trim() || "",
-      取得状況: "未取得"
-    });
-  });
-  document.getElementById("csvInput").value = "";
-});
+// 初回読み込み
+loadMarkers();

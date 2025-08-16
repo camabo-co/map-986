@@ -28,7 +28,7 @@
       margin: 3px;
       border-radius: 5px;
       border: none;
-      background-color: #2196F3; /* 青色に変更 */
+      background-color: #2196F3; /* 青色 */
       color: white;
       cursor: pointer;
     }
@@ -40,29 +40,11 @@
       padding: 4px;
       margin: 2px;
     }
-    .password-wrapper {
-      display: flex;
-      align-items: center;
-    }
-    .password-wrapper input[type="password"], .password-wrapper input[type="text"] {
-      flex: 1;
-    }
-    .password-wrapper button {
-      margin-left: 5px;
-    }
   </style>
 </head>
 <body>
-  <div id="auth">
-    <h2>🔒 パスワードを入力してください</h2>
-    <div class="password-wrapper">
-      <input type="password" id="password" placeholder="パスワード" />
-      <button onclick="togglePasswordVisibility()">👁️</button>
-    </div>
-    <button onclick="checkPassword()">OK</button>
-  </div>
 
-  <div id="main" style="display:none;">
+  <div id="main">
     <div class="button-row">
       <button class="icon-button" onclick="openListTab('未取得')">📋 未取得リスト</button>
       <button class="icon-button" onclick="openListTab('取得済み')">📋 取得済みリスト</button>
@@ -80,23 +62,8 @@
     <div id="map"></div>
   </div>
 
+  <!-- Leaflet & Firebase連携用 JavaScript -->
   <script type="module" src="scripts/map.js"></script>
-  <script>
-    function togglePasswordVisibility() {
-      const input = document.getElementById('password');
-      input.type = input.type === 'password' ? 'text' : 'password';
-    }
 
-    function checkPassword() {
-      const pw = document.getElementById("password").value;
-      if (pw === "hsyu986") {
-        document.getElementById("auth").style.display = "none";
-        document.getElementById("main").style.display = "block";
-      } else {
-        alert("パスワードが違います");
-        location.href = "https://www.google.com";
-      }
-    }
-  </script>
 </body>
 </html>
